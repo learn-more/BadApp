@@ -17,6 +17,19 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 static UINT g_ExecMessage;
 static HWND g_Dialog;
 static HWND g_Listbox;
+static BOOL g_UseThread = FALSE;
+
+
+static int (__cdecl* p_vsnwprintf)(wchar_t *_Dest, size_t _Count, const wchar_t *_Format, va_list _Args);
+int vsnwprintf_(wchar_t *_Dest, size_t _Count, const wchar_t *_Format, va_list _Args)
+{
+    if (!p_vsnwprintf)
+    {
+        HMODULE mod = GetModuleHandleW(L"ntdll.dll");
+        p_vsnwprintf = (int (__cdecl*)(wchar_t *, size_t, const wchar_t *, va_list))GetProcAddress(mod, "_vsnwprintf");
+    }
+    return p_vsnwprintf(_Dest, _Count, _Format, _Args);
+}
 
 void Output(wchar_t const* const _Format, ...)
 {
@@ -24,7 +37,8 @@ void Output(wchar_t const* const _Format, ...)
     va_start(_ArgList, _Format);
 
     wchar_t buf[1024];
-    vswprintf_s(buf, _countof(buf), _Format, _ArgList);
+    vsnwprintf_(buf, _countof(buf), _Format, _ArgList);
+    va_end(_ArgList);
     OutputDebugStringW(buf);
     OutputDebugStringW(L"\r\n");
 
@@ -32,10 +46,51 @@ void Output(wchar_t const* const _Format, ...)
     SendMessageW(g_Listbox, LB_SETCURSEL, Index, (LPARAM)NULL);
 }
 
+void* memset(void *s, int c, size_t len)
+{
+    unsigned char *dst = s;
+    while (len > 0) {
+        *dst = (unsigned char) c;
+        dst++;
+        len--;
+    }
+    return s;
+}
+
+typedef struct ThreadArg
+{
+    fn Func;
+    PVOID Allocation;
+} ThreadArg;
+
+static DWORD WINAPI ThreadProc(LPVOID pArg)
+{
+    ThreadArg* Arg = (ThreadArg*)pArg;
+    Arg->Func(Arg->Allocation);
+    LocalFree(Arg);
+    Output(L"Done.");
+    return 0;
+}
+
 void Schedule(fn pfn, PVOID Allocation)
 {
     RedrawWindow(g_Listbox, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
-    PostMessageW(g_Dialog, g_ExecMessage, (WPARAM)Allocation, (LPARAM)pfn);
+    if (g_UseThread)
+    {
+        ThreadArg* arg;
+        arg = LocalAlloc(LMEM_ZEROINIT , sizeof(*arg));
+        arg->Func = pfn;
+        arg->Allocation = Allocation;
+        HANDLE hThread = CreateThread(NULL, 0, ThreadProc, arg, 0, NULL);
+        if (hThread)
+            CloseHandle(hThread);
+        else
+            Output(L"Failed to create thread");
+    }
+    else
+    {
+        PostMessageW(g_Dialog, g_ExecMessage, (WPARAM)Allocation, (LPARAM)pfn);
+    }
 }
 
 static
@@ -51,11 +106,10 @@ static
 HBITMAP CreateHBITMAP(int cx, int cy, void **ppvBits)
 {
     HBITMAP hbmp;
-    BITMAPINFO bmi;
+    BITMAPINFO bmi = {0};
 
     HDC hdc = GetDC(NULL);
 
-    ZeroMemory(&bmi, sizeof(bmi));
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biCompression = BI_RGB;
@@ -193,6 +247,7 @@ INT_PTR CALLBACK WndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         fn func = (fn)(lParam);
         func((PVOID)wParam);
         Output(L"Done.");
+        return (INT_PTR)TRUE;
     }
 
     switch (message)
@@ -204,6 +259,7 @@ INT_PTR CALLBACK WndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         Heap_Init();
         if (IsRunAsAdmin())
             SetWindowTextW(hDlg, L"BadApp (Administrator)");
+        CheckDlgButton(hDlg, IDC_DISP_MSG, BST_CHECKED);
         return (INT_PTR)TRUE;
 
     case WM_COMMAND:
@@ -229,23 +285,36 @@ INT_PTR CALLBACK WndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         case IDC_MENU:
             OnShowMenu(hDlg);
             return (INT_PTR)TRUE;
+        case IDC_DISP_MSG:
+        case IDC_DISP_THREAD:
+            g_UseThread = IsDlgButtonChecked(hDlg, IDC_DISP_THREAD) == BST_CHECKED;
+            break;
         }
         break;
     }
     return (INT_PTR)FALSE;
 }
 
+LONG WINAPI xUnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ExceptionInfo)
+{
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR    lpCmdLine,
     _In_ int       nCmdShow)
 {
+    UNREFERENCED_PARAMETER(hInstance);
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
     UNREFERENCED_PARAMETER(nCmdShow);
 
+    SetUnhandledExceptionFilter(xUnhandledExceptionFilter);
+
     g_ExecMessage = RegisterWindowMessageW(L"BadApp_ExecLater");
 
-    return (int)DialogBox(hInstance, MAKEINTRESOURCE(IDD_MAINDLG), NULL, WndProc);
+    return (int)DialogBoxW(GetModuleHandleW(NULL), MAKEINTRESOURCE(IDD_MAINDLG), NULL, WndProc);
 }
 

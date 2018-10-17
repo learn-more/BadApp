@@ -56,11 +56,20 @@ void AnalyzeShims(LPCWSTR Executable)
 static
 BOOL ShowChar(WCHAR ch)
 {
-    if (iswprint(ch))
+    if (ch >= 0x20 && ch <= 0x7e)
     {
-        return ch != '\r' && ch != '\n' && ch != '\t';
+        return TRUE;
     }
     return FALSE;
+}
+
+static void xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...)
+{
+    va_list _ArgList;
+    va_start(_ArgList, _Format);
+
+    vsnwprintf_(_Dest, _Count, _Format, _ArgList);
+    va_end(_ArgList);
 }
 
 #define CHARS_PER_LINE 16
@@ -93,7 +102,7 @@ void AnalyzeRegistry(LPCWSTR Executable)
                     DWORD n = x + y;
                     if (n < dwDataSize)
                     {
-                        StringCchPrintfW(Tmp, _countof(Tmp), L" %02X", Data[n]);
+                        xwprintf(Tmp, _countof(Tmp), L" %02X", Data[n]);
                         StringCchCatW(Buffer, _countof(Buffer), Tmp);
                         TextBuffer[n % CHARS_PER_LINE] = ShowChar(Data[n]) ? Data[n] : '.';
                     }
@@ -252,11 +261,26 @@ static BOOL IsWerDisabled(LPCWSTR Executable, BOOL bAllUsers)
     return bDisabled;
 }
 
+static
+LPCWSTR wcspbrk_(LPCWSTR Source, LPCWSTR Find)
+{
+    for (;*Source; ++Source)
+    {
+        LPCWSTR FindCur;
+        for (FindCur = Find; *FindCur; ++FindCur)
+        {
+            if (*FindCur == *Source)
+                return Source;
+        }
+    }
+    return NULL;
+}
+
 static void AnalyzeWER(LPCWSTR FullPath)
 {
     LPCWSTR ExeOnly = FullPath;
     BOOL bCurrentUser, bAllUsers;
-    while ((FullPath = wcspbrk(ExeOnly, L"\\/")) != NULL)
+    while ((FullPath = wcspbrk_(ExeOnly, L"\\/")) != NULL)
     {
         ExeOnly = FullPath + 1;
     }
