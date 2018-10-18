@@ -320,6 +320,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR    lpCmdLine,
     _In_ int       nCmdShow)
 {
+    UINT Result;
     UNREFERENCED_PARAMETER(hInstance);
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
@@ -327,6 +328,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     g_ExecMessage = RegisterWindowMessageW(L"BadApp_ExecLater");
 
-    return (int)DialogBoxW(GetModuleHandleW(NULL), MAKEINTRESOURCE(IDD_MAINDLG), NULL, WndProc);
+    Result = (UINT)DialogBoxW(GetModuleHandleW(NULL), MAKEINTRESOURCE(IDD_MAINDLG), NULL, WndProc);
+    ExitProcess(Result);
 }
 
