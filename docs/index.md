@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# BadApp
+# Preview
 
 ![Example](BadApp.png)
 
