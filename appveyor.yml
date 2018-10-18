@@ -12,3 +12,7 @@ test: off
 artifacts:
 - path: bin\BadApp-$(Platform).exe
 - path: bin\BadApp-$(Platform).pdb
+skip_commits:
+  files:
+    - docs/*
+    - '**/*.html'
