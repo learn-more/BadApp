@@ -1,0 +1,14 @@
+version: '#{build}-{branch}'
+skip_tags: true
+configuration: Release
+platform:
+- x86
+- x64
+build:
+  project: BadApp.sln
+  parallel: true
+  verbosity: minimal
+test: off
+artifacts:
+- path: bin\BadApp-$(Platform).exe
+- path: bin\BadApp-$(Platform).pdb
