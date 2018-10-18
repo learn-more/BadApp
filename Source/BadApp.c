@@ -6,6 +6,7 @@
  */
 
 #include "stdafx.h"
+#include "version.h"
 #include <Shellapi.h>
 #define COBJMACROS
 #include <Wincodec.h>
@@ -21,7 +22,7 @@ static BOOL g_UseThread = FALSE;
 
 
 static int (__cdecl* p_vsnwprintf)(wchar_t *_Dest, size_t _Count, const wchar_t *_Format, va_list _Args);
-int vsnwprintf_(wchar_t *_Dest, size_t _Count, const wchar_t *_Format, va_list _Args)
+static int vsnwprintf_(wchar_t *_Dest, size_t _Count, const wchar_t *_Format, va_list _Args)
 {
     if (!p_vsnwprintf)
     {
@@ -44,6 +45,15 @@ void Output(wchar_t const* const _Format, ...)
 
     int Index = (int)SendMessageW(g_Listbox, LB_ADDSTRING, (WPARAM)NULL, (LPARAM)buf);
     SendMessageW(g_Listbox, LB_SETCURSEL, Index, (LPARAM)NULL);
+}
+
+void xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...)
+{
+    va_list _ArgList;
+    va_start(_ArgList, _Format);
+
+    vsnwprintf_(_Dest, _Count, _Format, _ArgList);
+    va_end(_ArgList);
 }
 
 void* memset(void *s, int c, size_t len)
@@ -239,6 +249,22 @@ void OnShowMenu(HWND hDlg)
     }
 }
 
+
+static
+void OnInitDialog(HWND hDlg)
+{
+    WCHAR Buffer[120];
+    g_Dialog = hDlg;
+    g_Listbox = GetDlgItem(hDlg, IDC_LISTOUTPUT);
+    Diag_Init();
+    Heap_Init();
+
+    xwprintf(Buffer, _countof(Buffer), L"BadApp %S%s", GIT_VERSION_STR, IsRunAsAdmin() ? L" (Administrator)" : L"");
+
+    SetWindowTextW(hDlg, Buffer);
+    CheckDlgButton(hDlg, IDC_DISP_MSG, BST_CHECKED);
+}
+
 static
 INT_PTR CALLBACK WndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -253,13 +279,7 @@ INT_PTR CALLBACK WndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
     case WM_INITDIALOG:
-        g_Dialog = hDlg;
-        g_Listbox = GetDlgItem(hDlg, IDC_LISTOUTPUT);
-        Diag_Init();
-        Heap_Init();
-        if (IsRunAsAdmin())
-            SetWindowTextW(hDlg, L"BadApp (Administrator)");
-        CheckDlgButton(hDlg, IDC_DISP_MSG, BST_CHECKED);
+        OnInitDialog(hDlg);
         return (INT_PTR)TRUE;
 
     case WM_COMMAND:
@@ -295,12 +315,6 @@ INT_PTR CALLBACK WndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-LONG WINAPI xUnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ExceptionInfo)
-{
-    return EXCEPTION_CONTINUE_SEARCH;
-}
-
-
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR    lpCmdLine,
@@ -310,8 +324,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
     UNREFERENCED_PARAMETER(nCmdShow);
-
-    SetUnhandledExceptionFilter(xUnhandledExceptionFilter);
 
     g_ExecMessage = RegisterWindowMessageW(L"BadApp_ExecLater");
 

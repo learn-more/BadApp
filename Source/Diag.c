@@ -63,15 +63,6 @@ BOOL ShowChar(WCHAR ch)
     return FALSE;
 }
 
-static void xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...)
-{
-    va_list _ArgList;
-    va_start(_ArgList, _Format);
-
-    vsnwprintf_(_Dest, _Count, _Format, _ArgList);
-    va_end(_ArgList);
-}
-
 #define CHARS_PER_LINE 16
 
 static

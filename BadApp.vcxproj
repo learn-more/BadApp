@@ -35,6 +35,7 @@
     <ClInclude Include="Source\Resource.h" />
     <ClInclude Include="Source\stdafx.h" />
     <ClInclude Include="Source\targetver.h" />
+    <ClInclude Include="Source\version.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Source\BadApp.ico" />
@@ -128,6 +129,12 @@
       <EntryPointSymbol>
       </EntryPointSymbol>
     </Link>
+    <PreBuildEvent>
+      <Command>GenVersion.bat</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating version header</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -147,6 +154,12 @@
       <EntryPointSymbol>
       </EntryPointSymbol>
     </Link>
+    <PreBuildEvent>
+      <Command>GenVersion.bat</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating version header</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -172,6 +185,12 @@
       <EntryPointSymbol>wWinMain</EntryPointSymbol>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
+    <PreBuildEvent>
+      <Command>GenVersion.bat</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating version header</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -197,6 +216,12 @@
       <EntryPointSymbol>wWinMain</EntryPointSymbol>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
+    <PreBuildEvent>
+      <Command>GenVersion.bat</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating version header</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

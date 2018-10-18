@@ -13,7 +13,7 @@ typedef void(*fn)(PVOID data);
 void Schedule(fn pfn, PVOID Allocation);
 
 void Output(wchar_t const* const _Format, ...);
-int vsnwprintf_(wchar_t *_Dest,size_t _Count,const wchar_t *_Format,va_list _Args);
+void xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...);
 
 void Diag_Init();
 BOOL RelaunchAsAdmin();
