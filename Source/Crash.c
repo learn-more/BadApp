@@ -7,77 +7,69 @@
 
 #include "stdafx.h"
 
-static
-void CallNullptrFN(PVOID Ptr)
-{
-    union
-    {
-        PVOID Ptr;
-        FARPROC Proc;
-    } AvoidWarning;
+volatile int g_AvoidWarning = 0;
 
-    AvoidWarning.Ptr = Ptr;
-    AvoidWarning.Proc();
+static
+void DummyFunction(void)
+{
+    Output(L"Dummy (should not end up here!)");
 }
 
 static
-void ReadNullptrFN(PVOID Ptr)
+void CallNullptrFN(void)
 {
-    PDWORD DwordPtr = (PDWORD)Ptr;
+    Action Proc = DummyFunction;
+
+    if (!g_AvoidWarning)
+        Proc = NULL;
+
+    Proc();
+}
+
+static
+void ReadNullptrFN(void)
+{
+    PDWORD DwordPtr = (PDWORD)NULL;
     DWORD Value = *DwordPtr;
     Output(L"Value: %u", Value);
 }
 
 static
-void WriteNullptrFN(PVOID Ptr)
+void WriteNullptrFN(void)
 {
-    PDWORD DwordPtr = (PDWORD)Ptr;
+    PDWORD DwordPtr = (PDWORD)NULL;
     *DwordPtr = 0x112233;
 }
 
 static
-void StackOverflowFN(PVOID Ptr)
+void StackOverflowFN(void)
 {
-    union
-    {
-        PVOID Ptr;
-        void (*Func)(void (*)(void*));
-    } AvoidWarning;
+    Action recurse = DummyFunction;
 
-    AvoidWarning.Ptr = Ptr;
-    AvoidWarning.Func(StackOverflowFN);
+    if (!g_AvoidWarning)
+        recurse = StackOverflowFN;
+
+    recurse();
 }
 
-
-void Crash_Execute(CrashAction Action)
+static BAD_ACTION g_Crash[] =
 {
-    union
-    {
-        PVOID Ptr;
-        fn Func;
-    } AvoidWarning;
+    { L"Call nullptr", L"Crash by calling a nullptr", L"Crash by calling a nullptr", CallNullptrFN },
+    { L"Read nullptr", L"Crash by reading from a nullptr", L"Crash by reading from a nullptr", ReadNullptrFN },
+    { L"Write nullptr", L"Crash by writing to a nullptr", L"Crash by writing to a nullptr", WriteNullptrFN },
+    { L"Stack overflow", L"Crash by causing a stack overflow", L"Crash by causing a stack overflow", StackOverflowFN },
+    { NULL, NULL },
+};
 
-    switch (Action)
-    {
-    case CallNullptr:
-        Output(L"Call nullptr");
-        Schedule(CallNullptrFN, NULL);
-        break;
-    case ReadNullptr:
-        Output(L"Read nullptr");
-        Schedule(ReadNullptrFN, NULL);
-        break;
-    case WriteNullptr:
-        Output(L"Write nullptr");
-        Schedule(WriteNullptrFN, NULL);
-        break;
-    case StackOverflow:
-        Output(L"Stack overflow");
-        AvoidWarning.Func = StackOverflowFN;
-        Schedule(StackOverflowFN, AvoidWarning.Ptr);
-        break;
-    default:
-        assert(0);
-        break;
-    }
+static BAD_ACTION g_CrashCategory =
+{
+    L"Crashes",
+    L"Invoke crashes",
+    L"Apply various techniques to crash BadApp.",
+    NULL
+};
+
+void Crash_Init(void)
+{
+    Register_Category(&g_CrashCategory, g_Crash);
 }

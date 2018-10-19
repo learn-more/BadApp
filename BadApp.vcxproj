@@ -43,6 +43,9 @@
   <ItemGroup>
     <ResourceCompile Include="Source\BadApp.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Source\BadApp.rc2" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C42D2E62-1DBE-46AF-8D38-4CE43CB7E40A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

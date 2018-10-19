@@ -25,6 +25,7 @@ Combining all kinds of common application bugs in a simple application ensures t
     * Crash by calling a nullptr
     * Crash by reading from a nullptr
     * Crash by writing to a nullptr
+    * Crash by causing a stack overflow
 * Control the context the bugs will use:
     * Called from DialogProc
     * Called from a new thread

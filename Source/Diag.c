@@ -52,6 +52,7 @@ void AnalyzeShims(LPCWSTR Executable)
     }
     FreeLibrary(hModule);
 }
+#if 0
 
 static
 BOOL ShowChar(WCHAR ch)
@@ -113,6 +114,7 @@ void AnalyzeRegistry(LPCWSTR Executable)
         CloseHandle(StateKey);
     }
 }
+#endif
 
 BOOL RelaunchAsAdmin()
 {
@@ -134,26 +136,32 @@ BOOL RelaunchAsAdmin()
     return bSuccess;
 }
 
+static BOOL g_bAdmin = -1;
 BOOL IsRunAsAdmin()
 {
-    BOOL fIsRunAsAdmin = FALSE;
-    PSID pAdministratorsGroup = NULL;
+    if (g_bAdmin == -1)
+    {
+        BOOL fIsRunAsAdmin = FALSE;
+        PSID pAdministratorsGroup = NULL;
 
-    // Allocate and initialize a SID of the administrators group.
-    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
-    if (!AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &pAdministratorsGroup))
-        return fIsRunAsAdmin;
+        // Allocate and initialize a SID of the administrators group.
+        SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+        if (AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS,
+                                     0, 0, 0, 0, 0, 0, &pAdministratorsGroup))
+        {
+            if (!CheckTokenMembership(NULL, pAdministratorsGroup, &fIsRunAsAdmin))
+                fIsRunAsAdmin = FALSE;
 
-    if (!CheckTokenMembership(NULL, pAdministratorsGroup, &fIsRunAsAdmin))
-        fIsRunAsAdmin = FALSE;
-
-    if (pAdministratorsGroup)
-        FreeSid(pAdministratorsGroup);
-
-    return fIsRunAsAdmin;
+            if (pAdministratorsGroup)
+                FreeSid(pAdministratorsGroup);
+        }
+        g_bAdmin = fIsRunAsAdmin;
+    }
+    return g_bAdmin;
 }
 
-void ResetFTHState()
+static
+void ResetFTHState(void)
 {
     SHELLEXECUTEINFOW shExInfo = { sizeof(shExInfo) };
     shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
@@ -184,6 +192,7 @@ void ResetFTHState()
     }
     CoUninitialize();
 }
+
 
 typedef HRESULT(__stdcall* WerAddExcludedApplicationProc)(PCWSTR pwzExeName, BOOL bAllUsers);
 typedef HRESULT(__stdcall* WerRemoveExcludedApplicationProc)(PCWSTR pwzExeName, BOOL bAllUsers);
@@ -287,10 +296,70 @@ static void AnalyzeWER(LPCWSTR FullPath)
     }
 }
 
-void Diag_Init()
+static
+void RelaunchFN(void)
+{
+    if (RelaunchAsAdmin())
+        PostQuitMessage(0);
+}
+
+static
+void EnableWerFN(void)
+{
+    EnableWER(TRUE);
+    EnableWER(FALSE);
+}
+
+static
+void DisableWerFN(void)
+{
+    DisableWER(TRUE);
+    DisableWER(FALSE);
+}
+
+static BAD_ACTION g_Diag[] =
+{
+    {
+        L"Relaunch as admin",
+        L"Relaunch BadApp as administrator",
+        L"Relaunch BadApp as administrator. This allows the modification of some properties in HKLM.",
+        RelaunchFN
+    },
+    {
+        L"Reset FTH State",
+        L"Reset the global FTH State",
+        L"Reset the list of applications tracked by FTH. This also removes FTH from all applications, so certain applications might start to malfuction (again).",
+        ResetFTHState
+    },
+    {
+        L"Enable WER",
+        L"Enable WER for BadApp",
+        L"Enable Windows Error Reporting for BadApp. First try to set this for all users, then for the current user.",
+        EnableWerFN
+    },
+    {
+        L"Disable WER",
+        L"Disable WER for BadApp",
+        L"Disable Windows Error Reporting for BadApp. First try to set this for all users, then for the current user.",
+        DisableWerFN
+    },
+    { NULL }
+};
+
+static BAD_ACTION g_DiagCategory =
+{
+    L"Diagnostics",
+    L"Various diagnostic functions",
+    L"Elevate BadApp, reset FTH, disable WER.",
+    NULL
+};
+
+void Diag_Init(void)
 {
     AnalyzeShims(AppExecutable());
-    AnalyzeRegistry(AppExecutable());
     AnalyzeWER(AppExecutable());
+
+    Register_Category(&g_DiagCategory, g_Diag + (IsRunAsAdmin() ? 1 : 0));
+    //AnalyzeRegistry(AppExecutable());
 }
 

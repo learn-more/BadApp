@@ -11,77 +11,103 @@ static HANDLE g_Heap1;
 static HANDLE g_Heap2;
 
 static
-void NormalFreeFN(PVOID Allocation)
+PVOID DoAllocation(void)
 {
+    PVOID Allocation = HeapAlloc(g_Heap1, 0, 0x10);
+    //Output(L"Alloc(Heap1, 0x10)=%p", Allocation);
+    return Allocation;
+}
+
+static
+void NormalFreeFN(void)
+{
+    PVOID Allocation = DoAllocation();
     HeapFree(g_Heap1, 0, Allocation);
 }
 
 static
-void UseAfterFreeFN(PVOID Allocation)
+void UseAfterFreeFN(void)
 {
+    PVOID Allocation = DoAllocation();
     PBYTE ptr = (PBYTE)Allocation;
     HeapFree(g_Heap1, 0, Allocation);
     ptr[0] = 0x11;
 }
 
 static
-void DoubleFreeFN(PVOID Allocation)
+void DoubleFreeFN(void)
 {
+    PVOID Allocation = DoAllocation();
     HeapFree(g_Heap1, 0, Allocation);
     HeapFree(g_Heap1, 0, Allocation);
 }
 
 static
-void WrongHeapFN(PVOID Allocation)
+void WrongHeapFN(void)
 {
+    PVOID Allocation = DoAllocation();
     HeapFree(g_Heap2, 0, Allocation);
 }
 
 static
-void OverflowFN(PVOID Allocation)
+void OverflowFN(void)
 {
-    PDWORD ptr = (PDWORD)Allocation;
-    ptr[0x10 / sizeof(DWORD)] = 0x11223344;
+    PVOID Allocation = DoAllocation();
+    PBYTE ptr = (PBYTE)Allocation;
+    ptr[0x10] = 0x11;
+    ptr[0x11] = 0x22;
     HeapFree(g_Heap1, 0, Allocation);
 }
 
-void Heap_Execute(HeapAction Action)
+static BAD_ACTION g_Heap[] =
 {
-    PVOID Allocation = HeapAlloc(g_Heap1, 0, 0x10);
-
-    Output(L"Alloc(Heap1, 0x10)=%p", Allocation);
-
-    switch (Action)
     {
-    case NormalAllocation:
-        Output(L"Normal free");
-        Schedule(NormalFreeFN, Allocation);
-        break;
-    case UseAfterFree:
-        Output(L"Use after free");
-        Schedule(UseAfterFreeFN, Allocation);
-        break;
-    case DoubleFree:
-        Output(L"Double free");
-        Schedule(DoubleFreeFN, Allocation);
-        break;
-    case FreeWrongHeap:
-        Output(L"Wrong heap");
-        Schedule(WrongHeapFN, Allocation);
-        break;
-    case HeapOverflow:
-        Output(L"Overflow");
-        Schedule(OverflowFN, Allocation);
-        break;
-    default:
-        assert(0);
-    }
-}
+        L"Normal alloc",
+        L"Allocate and free memory",
+        L"Allocate and free memory using HeapAlloc and HeapFree. This can be used to trigger checks in the heap functions.",
+        NormalFreeFN
+    },
+    {
+        L"Use after free",
+        L"Modify memory after it has been freed",
+        L"Free memory using HeapFree, and modify it afterwards.",
+        UseAfterFreeFN
+    },
+    {
+        L"Double free",
+        L"Free memory twice",
+        L"Free memory twice using HeapFree.",
+        DoubleFreeFN
+    },
+    {
+        L"Free wrong heap",
+        L"Free allocation from another heap as it was allocated from",
+        L"Allocate memory using HeapAlloc from Heap1, then free it using HeapFree from Heap2.",
+        WrongHeapFN
+    },
+    {
+        L"Buffer overflow",
+        L"Write more data than was allocated",
+        L"Write 2 bytes past the allocated space, then free the memory using HeapFree.",
+        OverflowFN
+    },
+    { NULL },
+};
 
-void Heap_Init()
+static BAD_ACTION g_HeapCategory =
+{
+    L"Heap",
+    L"Various heap bugs",
+    L"Trigger various heap bugs",
+    NULL
+};
+
+void Heap_Init(void)
 {
     g_Heap1 = HeapCreate(0, 0, 0);
     g_Heap2 = HeapCreate(0, 0, 0);
-    Output(L"Heap1: %p", g_Heap1);
-    Output(L"Heap2: %p", g_Heap2);
+
+    Register_Category(&g_HeapCategory, g_Heap);
 }
+
+
