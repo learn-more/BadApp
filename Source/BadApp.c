@@ -116,39 +116,93 @@ HTREEITEM InsertTV(HWND hwndTV, BAD_ACTION* Item, HTREEITEM Parent, HTREEITEM In
 static HWND g_hTreeView;
 static HWND g_hEdit;
 static HWND g_hGripper;
+static HWND g_hCombo;
 
-#define TV_WIDTH    200
+
+#define POS_FIXED       1
+#define POS_PERCENT     2
+#define POS_FOLLOW_SM   3
+#define POS_FOLLOW_OBJH 4
+
+#define FIXED_AT(n)         { POS_FIXED, n, 0 }
+#define PERCENTAGE(n)       { POS_PERCENT, n, 0 }
+#define FOLLOW_SM(n,m)        { POS_FOLLOW_SM, n, m }
+#define FOLLOW_OBJH(n)      { POS_FOLLOW_OBJH, n, 0 }
+
+typedef struct _RESIZE_COORD
+{
+    BYTE Type;
+    LONG Value;
+    LONG Max;
+} RESIZE_COORD;
+
+typedef struct _RESIZE_STRUCT
+{
+    HWND* hWindow;
+    RESIZE_COORD Left;
+    RESIZE_COORD Top;
+    RESIZE_COORD Right;
+    RESIZE_COORD Bottom;
+    HWND hInsertAfter;
+} RESIZE_STRUCT;
+
+RESIZE_STRUCT g_Resize[] =
+{
+    { &g_hTreeView, FIXED_AT(0), FIXED_AT(0), FIXED_AT(200), PERCENTAGE(100) },
+    { &g_hEdit, FIXED_AT(200), FIXED_AT(0), PERCENTAGE(100), FIXED_AT(100) },
+    { &g_hCombo, FIXED_AT(200), FOLLOW_OBJH(0), FOLLOW_SM(SM_CXVSCROLL,400), PERCENTAGE(100) },
+    { &g_hGripper, FOLLOW_SM(SM_CXVSCROLL,0), FOLLOW_SM(SM_CYVSCROLL,0), PERCENTAGE(100), PERCENTAGE(100), HWND_TOP },
+};
+
+static
+LONG DoCoord(HWND hObject, LONG MaxValue, const RESIZE_COORD* coord)
+{
+    if (coord->Type == POS_FIXED)
+        return coord->Value;
+    if (coord->Type == POS_PERCENT)
+        return coord->Value * MaxValue / 100;
+    if (coord->Type == POS_FOLLOW_SM)
+    {
+        LONG Value = MaxValue - GetSystemMetrics(coord->Value);
+        if (coord->Max && Value > coord->Max)
+            return coord->Max;
+        return Value;
+    }
+    if (coord->Type == POS_FOLLOW_OBJH)
+    {
+        RECT rc;
+        GetWindowRect(hObject, &rc);
+        return MaxValue - (rc.bottom - rc.top) - coord->Value;
+    }
+    assert(0);
+    return 0;
+}
 
 static
 void OnSize(HWND hWnd)
 {
     HDWP hdwp;
-    RECT rc;
-    LONG width;
-    DWORD dwFlags = SWP_NOCOPYBITS | SWP_NOZORDER | SWP_NOACTIVATE;
+    RECT rcClient;
+    DWORD n, dwFlags = SWP_NOCOPYBITS | SWP_NOZORDER | SWP_NOACTIVATE;
 
-    GetClientRect(hWnd, &rc);
-    width = (rc.right - rc.left) - TV_WIDTH;
+    GetClientRect(hWnd, &rcClient);
+    assert(rcClient.left == 0);
+    assert(rcClient.top == 0);
 
-    hdwp = BeginDeferWindowPos(3);
+    hdwp = BeginDeferWindowPos(_countof(g_Resize));
 
-    if (hdwp)
-        hdwp = DeferWindowPos(hdwp, g_hTreeView, NULL, rc.left, rc.top, TV_WIDTH, rc.bottom - rc.top, dwFlags);
-
-    rc.left += TV_WIDTH;
-
-    if (hdwp)
-        hdwp = DeferWindowPos(hdwp, g_hEdit, NULL, rc.left, rc.top, width, (rc.bottom - rc.top) / 2, dwFlags);
-
-    /* Combo box */
-    /* Execute button */
-    /* Output / log window? */
-
-    if (hdwp)
+    for (n = 0; n < _countof(g_Resize); ++n)
     {
-        int cx = GetSystemMetrics(SM_CXVSCROLL);
-        int cy = GetSystemMetrics(SM_CYHSCROLL);
-        hdwp = DeferWindowPos(hdwp, g_hGripper, HWND_TOP, rc.right - cx, rc.bottom - cy, cx, cy, dwFlags);
+        RECT rc;
+        HWND hObject = *g_Resize[n].hWindow;
+
+        rc.left = DoCoord(hObject, rcClient.right, &g_Resize[n].Left);
+        rc.top = DoCoord(hObject, rcClient.bottom, &g_Resize[n].Top);
+        rc.right = DoCoord(hObject, rcClient.right, &g_Resize[n].Right);
+        rc.bottom = DoCoord(hObject, rcClient.bottom, &g_Resize[n].Bottom);
+
+        if (hdwp)
+            hdwp = DeferWindowPos(hdwp, hObject, NULL, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, dwFlags);
     }
 
     EndDeferWindowPos(hdwp);
@@ -163,7 +217,7 @@ void CreateTV(HWND hWnd, HINSTANCE hInstance)
 
     g_hTreeView = CreateWindowExW(0, WC_TREEVIEW, L"Hello :)", WS_VISIBLE | WS_CHILD | WS_BORDER | dwTvStyle,
                                   0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
-    SendMessage(g_hTreeView, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
+    SendMessageW(g_hTreeView, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 
     for (n = 0; g_Category[n].Actions; ++n)
     {
@@ -186,14 +240,23 @@ void OnCreate(HWND hWnd)
 
     CreateTV(hWnd, hInstance);
 
-    g_hEdit = CreateWindowExW(WS_EX_NOPARENTNOTIFY | WS_EX_CLIENTEDGE, WC_EDIT, NULL,
+    g_hEdit = CreateWindowExW(WS_EX_NOPARENTNOTIFY | WS_EX_CLIENTEDGE, WC_EDITW, NULL,
                               WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
                               0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
-    SendMessage(g_hEdit, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
+    SendMessageW(g_hEdit, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 
     g_hGripper = CreateWindowExW(0, L"Scrollbar", L"size", WS_CHILD | WS_VISIBLE | SBS_SIZEGRIP,
                                  0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
+    SendMessageW(g_hGripper, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 
+    g_hCombo = CreateWindowExW(0, WC_COMBOBOXW, L"", CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE,
+                               0, 0, 0, 200, hWnd, NULL, hInstance, NULL);
+    SendMessageW(g_hCombo, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
+
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Direct call");
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Window message");
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"New thread");
+    SendMessageW(g_hCombo, CB_SETCURSEL, 0, 0);
 }
 
 static
