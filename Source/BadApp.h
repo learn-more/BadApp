@@ -14,12 +14,23 @@ void xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...);
 
 typedef void (*Action)(void);
 
+typedef enum _ACTION_ICON
+{
+    NoIcon,
+    ApplicationIcon,    // IDI_APPLICATION
+    BadIcon,            // IDI_HAND
+    InformationIcon,    // IDI_ASTERISK
+    ShieldIcon,         // IDI_SHIELD
+    MaxIcons
+} ACTION_ICON;
+
 typedef struct _BAD_ACTION
 {
     LPCWSTR Name;
     LPCWSTR Tooltip;
     LPCWSTR Description;
     Action Execute;
+    ACTION_ICON iIcon;
 } BAD_ACTION;
 
 

@@ -54,10 +54,34 @@ void StackOverflowFN(void)
 
 static BAD_ACTION g_Crash[] =
 {
-    { L"Call nullptr", L"Crash by calling a nullptr", L"Crash by calling a nullptr", CallNullptrFN },
-    { L"Read nullptr", L"Crash by reading from a nullptr", L"Crash by reading from a nullptr", ReadNullptrFN },
-    { L"Write nullptr", L"Crash by writing to a nullptr", L"Crash by writing to a nullptr", WriteNullptrFN },
-    { L"Stack overflow", L"Crash by causing a stack overflow", L"Crash by causing a stack overflow", StackOverflowFN },
+    {
+        L"Call nullptr",
+        L"Crash by calling a nullptr",
+        L"Crash by calling a nullptr",
+        CallNullptrFN,
+        BadIcon
+    },
+    {
+        L"Read nullptr",
+        L"Crash by reading from a nullptr",
+        L"Crash by reading from a nullptr",
+        ReadNullptrFN,
+        BadIcon
+    },
+    {
+        L"Write nullptr",
+        L"Crash by writing to a nullptr",
+        L"Crash by writing to a nullptr",
+        WriteNullptrFN,
+        BadIcon
+    },
+    {
+        L"Stack overflow",
+        L"Crash by causing a stack overflow",
+        L"Crash by causing a stack overflow",
+        StackOverflowFN,
+        BadIcon
+    },
     { NULL, NULL },
 };
 

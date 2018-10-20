@@ -65,31 +65,36 @@ static BAD_ACTION g_Heap[] =
         L"Normal alloc",
         L"Allocate and free memory",
         L"Allocate and free memory using HeapAlloc and HeapFree. This can be used to trigger checks in the heap functions.",
-        NormalFreeFN
+        NormalFreeFN,
+        NoIcon
     },
     {
         L"Use after free",
         L"Modify memory after it has been freed",
         L"Free memory using HeapFree, and modify it afterwards.",
-        UseAfterFreeFN
+        UseAfterFreeFN,
+        BadIcon
     },
     {
         L"Double free",
         L"Free memory twice",
         L"Free memory twice using HeapFree.",
-        DoubleFreeFN
+        DoubleFreeFN,
+        BadIcon
     },
     {
         L"Free wrong heap",
         L"Free allocation from another heap as it was allocated from",
         L"Allocate memory using HeapAlloc from Heap1, then free it using HeapFree from Heap2.",
-        WrongHeapFN
+        WrongHeapFN,
+        BadIcon
     },
     {
         L"Buffer overflow",
         L"Write more data than was allocated",
         L"Write 2 bytes past the allocated space, then free the memory using HeapFree.",
-        OverflowFN
+        OverflowFN,
+        BadIcon
     },
     { NULL },
 };
@@ -99,7 +104,8 @@ static BAD_ACTION g_HeapCategory =
     L"Heap",
     L"Various heap bugs",
     L"Trigger various heap bugs",
-    NULL
+    NULL,
+    NoIcon
 };
 
 void Heap_Init(void)

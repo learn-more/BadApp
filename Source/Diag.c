@@ -323,25 +323,29 @@ static BAD_ACTION g_Diag[] =
         L"Relaunch as admin",
         L"Relaunch BadApp as administrator",
         L"Relaunch BadApp as administrator. This allows the modification of some properties in HKLM.",
-        RelaunchFN
+        RelaunchFN,
+        ShieldIcon
     },
     {
         L"Reset FTH State",
         L"Reset the global FTH State",
         L"Reset the list of applications tracked by FTH. This also removes FTH from all applications, so certain applications might start to malfuction (again).",
-        ResetFTHState
+        ResetFTHState,
+        ShieldIcon
     },
     {
         L"Enable WER",
         L"Enable WER for BadApp",
         L"Enable Windows Error Reporting for BadApp. First try to set this for all users, then for the current user.",
-        EnableWerFN
+        EnableWerFN,
+        ApplicationIcon
     },
     {
         L"Disable WER",
         L"Disable WER for BadApp",
         L"Disable Windows Error Reporting for BadApp. First try to set this for all users, then for the current user.",
-        DisableWerFN
+        DisableWerFN,
+        ApplicationIcon
     },
     { NULL }
 };
