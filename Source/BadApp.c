@@ -197,7 +197,7 @@ void OnCreate(HWND hWnd)
 }
 
 static
-void OnTreeviewNotify(HWND hWnd, LPNMTREEVIEWW lTreeview)
+void OnTreeviewNotify(LPNMTREEVIEWW lTreeview)
 {
     LPNMTVGETINFOTIPW pTip;
     BAD_ACTION* Action;
@@ -237,7 +237,7 @@ void OnTreeviewNotify(HWND hWnd, LPNMTREEVIEWW lTreeview)
 }
 
 static
-INT_PTR CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
     switch (Msg)
     {
@@ -263,7 +263,7 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
         break;
     case WM_NOTIFY:
         if (((LPNMHDR)lParam)->hwndFrom == g_hTreeView)
-            OnTreeviewNotify(hWnd, (LPNMTREEVIEWW)lParam);
+            OnTreeviewNotify((LPNMTREEVIEWW)lParam);
         break;
     default:
         break;
@@ -327,6 +327,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     BOOL bRet;
     const LPCWSTR lpClassName = L"BadAppClass";
 
+    UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
     UNREFERENCED_PARAMETER(nCmdShow);
 
@@ -339,12 +340,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     if (!RegisterWndClass(hInstance, lpClassName))
     {
-        ExitProcess(-1);
+        ExitProcess(GetLastError());
     }
 
-    if (!(hWnd = CreateBadWindow(hInstance, lpClassName)))
+    hWnd = CreateBadWindow(hInstance, lpClassName);
+    if (!hWnd)
     {
-        ExitProcess(-2);
+        ExitProcess(GetLastError());
     }
 
     ShowWindow(hWnd, SW_SHOW);
@@ -355,7 +357,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         if (bRet == -1)
         {
             DestroyWindow(hWnd);
-            ExitProcess(-3);
+            ExitProcess(GetLastError());
         }
         TranslateMessage(&Msg);
         DispatchMessageW(&Msg);
