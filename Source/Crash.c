@@ -7,21 +7,13 @@
 
 #include "stdafx.h"
 
-volatile int g_AvoidWarning = 0;
-
-void BADAPP_EXPORT DummyFunction(void)
-{
-    Output(L"Dummy (should not end up here!)");
-}
-
 void BADAPP_EXPORT CallNullptrFN(void)
 {
-    Action Proc = DummyFunction;
-
-    if (!g_AvoidWarning)
-        Proc = NULL;
+    Action Proc = (Action)GetProcAddress(0, "__this_function_does_not_exist_but_my_compiler_doesnt_know_that__");
 
     Proc();
+    if (Proc == CallNullptrFN)
+        Output(L"Done.");   // Prevent tail call optimalization
 }
 
 void BADAPP_EXPORT ReadNullptrFN(void)
@@ -39,12 +31,13 @@ void BADAPP_EXPORT WriteNullptrFN(void)
 
 void BADAPP_EXPORT StackOverflowFN(void)
 {
-    Action recurse = DummyFunction;
-
-    if (!g_AvoidWarning)
+    Action recurse = (Action)GetProcAddress(0, "StackOverflowFN");
+    if (recurse == NULL)
         recurse = StackOverflowFN;
 
     recurse();
+    if (recurse == CallNullptrFN)
+        Output(L"Done.");   // Prevent tail call optimalization
 }
 
 static BAD_ACTION g_Crash[] =

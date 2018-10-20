@@ -22,13 +22,14 @@ typedef enum _BAD_CALLCONTEXT
 {
     InvalidCC = CB_ERR,
     DirectCC = 0,
-    WindowMessageCC,
-    NewThreadCC,
+    PostMessageCC,
+    CreateThreadCC,
 } BAD_CALLCONTEXT;
 
 #define MAX_NUMBER_OF_CATEGORY  5
 static BAD_CATEGORY g_Category[MAX_NUMBER_OF_CATEGORY + 1] = {0};
 static BAD_CALLCONTEXT g_CallContext = DirectCC;
+static ULONG g_ExecMessage;
 static HWND g_hTreeView;
 static HIMAGELIST g_hTreeViewImagelist;
 static HWND g_hEdit;
@@ -210,12 +211,50 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
     SendMessageW(g_hCombo, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 
     SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Direct call");    // DirectCC
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Window message"); // WindowMessageCC
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"New thread");     // NewThreadCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"PostMessage");    // WindowMessageCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"CreateThread");   // NewThreadCC
     SendMessageW(g_hCombo, CB_SETCURSEL, (WPARAM)g_CallContext, 0);
 }
 
-void BADAPP_EXPORT OnTreeviewNotify(LPNMTREEVIEWW lTreeview)
+/* This is only here to show up in the callstack */
+void BADAPP_EXPORT OnDirectCall(BAD_ACTION* Action)
+{
+    Action->Execute();
+}
+
+DWORD BADAPP_EXPORT WINAPI ThreadProc(LPVOID pArg)
+{
+    BAD_ACTION* Action = (BAD_ACTION*)pArg;
+    Action->Execute();
+    return 0;
+}
+
+void BADAPP_EXPORT OnExecute(HWND hWnd, BAD_ACTION* Action)
+{
+    HANDLE hThread;
+
+    switch (g_CallContext)
+    {
+    case DirectCC:
+        OnDirectCall(Action);
+        break;
+    case PostMessageCC:
+        PostMessageW(hWnd, g_ExecMessage, 0L, (LPARAM)Action);
+        break;
+    case CreateThreadCC:
+        hThread = CreateThread(NULL, 0, ThreadProc, Action, 0, NULL);
+        if (hThread)
+            CloseHandle(hThread);
+        else
+            Output(L"Failed to create thread");
+        break;
+    default:
+        assert(0);
+        break;
+    }
+}
+
+void BADAPP_EXPORT OnTreeviewNotify(HWND hWnd, LPNMTREEVIEWW lTreeview)
 {
     LPNMTVGETINFOTIPW pTip;
     BAD_ACTION* Action;
@@ -249,7 +288,7 @@ void BADAPP_EXPORT OnTreeviewNotify(LPNMTREEVIEWW lTreeview)
         if (tvi.hItem && SendMessageW(g_hTreeView, TVM_GETITEMW, 0L, (LPARAM)&tvi))
         {
             Action = (BAD_ACTION*)tvi.lParam;
-            Action->Execute();
+            OnExecute(hWnd, Action);
         }
         break;
     }
@@ -257,6 +296,13 @@ void BADAPP_EXPORT OnTreeviewNotify(LPNMTREEVIEWW lTreeview)
 
 LRESULT BADAPP_EXPORT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+    if (g_ExecMessage == Msg)
+    {
+        BAD_ACTION* Action = (BAD_ACTION*)lParam;
+        Action->Execute();
+        return 0L;
+    }
+
     switch (Msg)
     {
     case WM_CREATE:
@@ -282,7 +328,7 @@ LRESULT BADAPP_EXPORT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARA
         break;
     case WM_NOTIFY:
         if (((LPNMHDR)lParam)->hwndFrom == g_hTreeView)
-            OnTreeviewNotify((LPNMTREEVIEWW)lParam);
+            OnTreeviewNotify(hWnd, (LPNMTREEVIEWW)lParam);
         break;
     default:
         break;
@@ -375,6 +421,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(nCmdShow);
 
     hInstance = GetModuleHandleW(NULL);
+    g_ExecMessage = RegisterWindowMessageW(L"BadAppExecLaterMSG");
     InitCommonControls();
 
     Crash_Init();
