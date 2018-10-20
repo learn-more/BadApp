@@ -9,14 +9,12 @@
 
 volatile int g_AvoidWarning = 0;
 
-static
-void DummyFunction(void)
+void BADAPP_EXPORT DummyFunction(void)
 {
     Output(L"Dummy (should not end up here!)");
 }
 
-static
-void CallNullptrFN(void)
+void BADAPP_EXPORT CallNullptrFN(void)
 {
     Action Proc = DummyFunction;
 
@@ -26,23 +24,20 @@ void CallNullptrFN(void)
     Proc();
 }
 
-static
-void ReadNullptrFN(void)
+void BADAPP_EXPORT ReadNullptrFN(void)
 {
     PDWORD DwordPtr = (PDWORD)NULL;
     DWORD Value = *DwordPtr;
     Output(L"Value: %u", Value);
 }
 
-static
-void WriteNullptrFN(void)
+void BADAPP_EXPORT WriteNullptrFN(void)
 {
     PDWORD DwordPtr = (PDWORD)NULL;
     *DwordPtr = 0x112233;
 }
 
-static
-void StackOverflowFN(void)
+void BADAPP_EXPORT StackOverflowFN(void)
 {
     Action recurse = DummyFunction;
 
@@ -93,7 +88,7 @@ static BAD_ACTION g_CrashCategory =
     NULL
 };
 
-void Crash_Init(void)
+void BADAPP_EXPORT Crash_Init(void)
 {
     Register_Category(&g_CrashCategory, g_Crash);
 }

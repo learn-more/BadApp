@@ -10,23 +10,20 @@
 static HANDLE g_Heap1;
 static HANDLE g_Heap2;
 
-static
-PVOID DoAllocation(void)
+PVOID BADAPP_EXPORT DoAllocation(void)
 {
     PVOID Allocation = HeapAlloc(g_Heap1, 0, 0x10);
     //Output(L"Alloc(Heap1, 0x10)=%p", Allocation);
     return Allocation;
 }
 
-static
-void NormalFreeFN(void)
+void BADAPP_EXPORT NormalFreeFN(void)
 {
     PVOID Allocation = DoAllocation();
     HeapFree(g_Heap1, 0, Allocation);
 }
 
-static
-void UseAfterFreeFN(void)
+void BADAPP_EXPORT UseAfterFreeFN(void)
 {
     PVOID Allocation = DoAllocation();
     PBYTE ptr = (PBYTE)Allocation;
@@ -34,23 +31,20 @@ void UseAfterFreeFN(void)
     ptr[0] = 0x11;
 }
 
-static
-void DoubleFreeFN(void)
+void BADAPP_EXPORT DoubleFreeFN(void)
 {
     PVOID Allocation = DoAllocation();
     HeapFree(g_Heap1, 0, Allocation);
     HeapFree(g_Heap1, 0, Allocation);
 }
 
-static
-void WrongHeapFN(void)
+void BADAPP_EXPORT WrongHeapFN(void)
 {
     PVOID Allocation = DoAllocation();
     HeapFree(g_Heap2, 0, Allocation);
 }
 
-static
-void OverflowFN(void)
+void BADAPP_EXPORT OverflowFN(void)
 {
     PVOID Allocation = DoAllocation();
     PBYTE ptr = (PBYTE)Allocation;
@@ -108,7 +102,7 @@ static BAD_ACTION g_HeapCategory =
     NoIcon
 };
 
-void Heap_Init(void)
+void BADAPP_EXPORT Heap_Init(void)
 {
     g_Heap1 = HeapCreate(0, 0, 0);
     g_Heap2 = HeapCreate(0, 0, 0);

@@ -9,7 +9,7 @@
 #include <shellapi.h>
 #include <Objbase.h>
 
-static PCWSTR AppExecutable()
+PCWSTR BADAPP_EXPORT AppExecutable()
 {
     static WCHAR PathBuffer[MAX_PATH * 4] = { 0 };
 
@@ -28,8 +28,8 @@ static PCWSTR AppExecutable()
 
 typedef BOOL(WINAPI *SdbGetPermLayerKeysProc)(PCWSTR wszPath, PWSTR pwszLayers, PDWORD pdwBytes, DWORD dwFlags);
 
-static
-void AnalyzeShims(LPCWSTR Executable)
+
+void BADAPP_EXPORT AnalyzeShims(LPCWSTR Executable)
 {
     WCHAR Buffer[MAX_LAYER_LENGTH];
     DWORD dwBytes;
@@ -116,7 +116,7 @@ void AnalyzeRegistry(LPCWSTR Executable)
 }
 #endif
 
-BOOL RelaunchAsAdmin()
+BOOL BADAPP_EXPORT RelaunchAsAdmin()
 {
     BOOL bSuccess = TRUE;
     SHELLEXECUTEINFOW shExInfo = { sizeof(shExInfo) };
@@ -137,7 +137,7 @@ BOOL RelaunchAsAdmin()
 }
 
 static BOOL g_bAdmin = -1;
-BOOL IsRunAsAdmin()
+BOOL BADAPP_EXPORT IsRunAsAdmin()
 {
     if (g_bAdmin == -1)
     {
@@ -160,8 +160,7 @@ BOOL IsRunAsAdmin()
     return g_bAdmin;
 }
 
-static
-void ResetFTHState(void)
+void BADAPP_EXPORT ResetFTHState(void)
 {
     SHELLEXECUTEINFOW shExInfo = { sizeof(shExInfo) };
     shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
@@ -197,7 +196,7 @@ void ResetFTHState(void)
 typedef HRESULT(__stdcall* WerAddExcludedApplicationProc)(PCWSTR pwzExeName, BOOL bAllUsers);
 typedef HRESULT(__stdcall* WerRemoveExcludedApplicationProc)(PCWSTR pwzExeName, BOOL bAllUsers);
 
-void EnableWER(BOOL bAllUsers)
+void BADAPP_EXPORT EnableWER(BOOL bAllUsers)
 {
     WCHAR PathBuffer[MAX_PATH * 4];
     GetModuleFileNameW(NULL, PathBuffer, _countof(PathBuffer));
@@ -217,7 +216,7 @@ void EnableWER(BOOL bAllUsers)
         FreeLibrary(mod);
 }
 
-void DisableWER(BOOL bAllUsers)
+void BADAPP_EXPORT DisableWER(BOOL bAllUsers)
 {
     HMODULE mod = LoadLibraryW(L"wer.dll");
     WerAddExcludedApplicationProc proc = (WerAddExcludedApplicationProc)GetProcAddress(mod, "WerAddExcludedApplication");
@@ -238,7 +237,7 @@ void DisableWER(BOOL bAllUsers)
 #define WER_EXCLUDED_KEY               L"SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\ExcludedApplications"
 
 
-static BOOL IsWerDisabled(LPCWSTR Executable, BOOL bAllUsers)
+BOOL BADAPP_EXPORT IsWerDisabled(LPCWSTR Executable, BOOL bAllUsers)
 {
     HKEY StateKey;
     LSTATUS Status;
@@ -261,8 +260,7 @@ static BOOL IsWerDisabled(LPCWSTR Executable, BOOL bAllUsers)
     return bDisabled;
 }
 
-static
-LPCWSTR wcspbrk_(LPCWSTR Source, LPCWSTR Find)
+LPCWSTR BADAPP_EXPORT wcspbrk_(LPCWSTR Source, LPCWSTR Find)
 {
     for (;*Source; ++Source)
     {
@@ -276,7 +274,7 @@ LPCWSTR wcspbrk_(LPCWSTR Source, LPCWSTR Find)
     return NULL;
 }
 
-static void AnalyzeWER(LPCWSTR FullPath)
+void BADAPP_EXPORT AnalyzeWER(LPCWSTR FullPath)
 {
     LPCWSTR ExeOnly = FullPath;
     BOOL bCurrentUser, bAllUsers;
@@ -296,22 +294,19 @@ static void AnalyzeWER(LPCWSTR FullPath)
     }
 }
 
-static
-void RelaunchFN(void)
+void BADAPP_EXPORT RelaunchFN(void)
 {
     if (RelaunchAsAdmin())
         PostQuitMessage(0);
 }
 
-static
-void EnableWerFN(void)
+void BADAPP_EXPORT EnableWerFN(void)
 {
     EnableWER(TRUE);
     EnableWER(FALSE);
 }
 
-static
-void DisableWerFN(void)
+void BADAPP_EXPORT DisableWerFN(void)
 {
     DisableWER(TRUE);
     DisableWER(FALSE);
@@ -358,12 +353,16 @@ static BAD_ACTION g_DiagCategory =
     NULL
 };
 
-void Diag_Init(void)
+void BADAPP_EXPORT Diag_Init(void)
 {
+    BOOL bAdmin;
     AnalyzeShims(AppExecutable());
     AnalyzeWER(AppExecutable());
 
-    Register_Category(&g_DiagCategory, g_Diag + (IsRunAsAdmin() ? 1 : 0));
+    bAdmin = IsRunAsAdmin();
+    if (bAdmin)
+        g_Diag[1].iIcon = ApplicationIcon;
+    Register_Category(&g_DiagCategory, g_Diag + (bAdmin ? 1 : 0));
     //AnalyzeRegistry(AppExecutable());
 }
 

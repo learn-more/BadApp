@@ -9,8 +9,17 @@
 
 #include "resource.h"
 
-void Output(wchar_t const* const _Format, ...);
-void xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...);
+/* Export all symbols, to generate a nicer callstack without symbols */
+#if 1
+#define BADAPP_EXPORT    __declspec(dllexport)
+#else
+#define BADAPP_EXPORT
+#endif
+
+
+
+void BADAPP_EXPORT Output(wchar_t const* const _Format, ...);
+void BADAPP_EXPORT xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...);
 
 typedef void (*Action)(void);
 
@@ -34,10 +43,10 @@ typedef struct _BAD_ACTION
 } BAD_ACTION;
 
 
-BOOL IsRunAsAdmin(void);
-void Register_Category(BAD_ACTION* Name, BAD_ACTION* Actions);
+BOOL BADAPP_EXPORT IsRunAsAdmin(void);
+void BADAPP_EXPORT Register_Category(BAD_ACTION* Name, BAD_ACTION* Actions);
 
-void Crash_Init(void);
-void Heap_Init(void);
-void Diag_Init(void);
+void BADAPP_EXPORT Crash_Init(void);
+void BADAPP_EXPORT Heap_Init(void);
+void BADAPP_EXPORT Diag_Init(void);
 

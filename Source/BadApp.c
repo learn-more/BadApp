@@ -10,56 +10,6 @@
 #include <CommCtrl.h>
 #pragma comment(lib, "comctl32.lib")
 
-#pragma comment(linker,"\"/manifestdependency:type='win32' \
-name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
-processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
-
-
-static int (__cdecl* p_vsnwprintf)(wchar_t *_Dest, size_t _Count, const wchar_t *_Format, va_list _Args);
-static int vsnwprintf_(wchar_t *_Dest, size_t _Count, const wchar_t *_Format, va_list _Args)
-{
-    if (!p_vsnwprintf)
-    {
-        HMODULE mod = GetModuleHandleW(L"ntdll.dll");
-        p_vsnwprintf = (int (__cdecl*)(wchar_t *, size_t, const wchar_t *, va_list))GetProcAddress(mod, "_vsnwprintf");
-    }
-    return p_vsnwprintf(_Dest, _Count, _Format, _Args);
-}
-
-void Output(wchar_t const* const _Format, ...)
-{
-    va_list _ArgList;
-    va_start(_ArgList, _Format);
-
-    wchar_t buf[1024];
-    vsnwprintf_(buf, _countof(buf), _Format, _ArgList);
-    va_end(_ArgList);
-    OutputDebugStringW(buf);
-    OutputDebugStringW(L"\r\n");
-
-    //int Index = (int)SendMessageW(g_Listbox, LB_ADDSTRING, 0L, (LPARAM)buf);
-    //SendMessageW(g_Listbox, LB_SETCURSEL, Index, 0L);
-}
-
-void xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...)
-{
-    va_list _ArgList;
-    va_start(_ArgList, _Format);
-
-    vsnwprintf_(_Dest, _Count, _Format, _ArgList);
-    va_end(_ArgList);
-}
-
-void* memset(void *s, int c, size_t len)
-{
-    unsigned char *dst = s;
-    while (len > 0) {
-        *dst = (unsigned char) c;
-        dst++;
-        len--;
-    }
-    return s;
-}
 
 typedef struct _BAD_CATEGORY
 {
@@ -68,40 +18,22 @@ typedef struct _BAD_CATEGORY
     BAD_ACTION* Actions;
 } BAD_CATEGORY;
 
-#define MAX_NUMBER_OF_CATEGORY  5
-BAD_CATEGORY g_Category[MAX_NUMBER_OF_CATEGORY + 1] = {0};
-
-void Register_Category(BAD_ACTION* Name, BAD_ACTION* Actions)
+typedef enum _BAD_CALLCONTEXT
 {
-    DWORD n;
+    InvalidCC = CB_ERR,
+    DirectCC = 0,
+    WindowMessageCC,
+    NewThreadCC,
+} BAD_CALLCONTEXT;
 
-    assert(Name->Execute == NULL);
-
-    for (n = 0; Actions[n].Name; ++n)
-    {
-        assert(Actions[n].Execute != NULL);
-    }
-
-    for (n = 0; n < MAX_NUMBER_OF_CATEGORY; ++n)
-    {
-        if (!g_Category[n].Actions)
-        {
-            g_Category[n].Info = *Name;
-            g_Category[n].Actions = Actions;
-            return;
-        }
-    }
-
-    Output(L"Increase MAX_NUMBER_OF_CATEGORY");
-    assert(0);
-}
-
+#define MAX_NUMBER_OF_CATEGORY  5
+static BAD_CATEGORY g_Category[MAX_NUMBER_OF_CATEGORY + 1] = {0};
+static BAD_CALLCONTEXT g_CallContext = DirectCC;
 static HWND g_hTreeView;
 static HIMAGELIST g_hTreeViewImagelist;
 static HWND g_hEdit;
 static HWND g_hGripper;
 static HWND g_hCombo;
-
 
 #define POS_FIXED       1
 #define POS_PERCENT     2
@@ -113,7 +45,6 @@ static HWND g_hCombo;
 #define FOLLOW_SM(n,m)        { POS_FOLLOW_SM, n, m, NULL }
 #define FOLLOW_OBJH(n, h)      { POS_FOLLOW_OBJH, n, 0, h }
 
-
 typedef struct _RESIZE_COORD
 {
     BYTE Type;
@@ -122,18 +53,16 @@ typedef struct _RESIZE_COORD
     HWND* hOther;
 } RESIZE_COORD;
 
-typedef struct _RESIZE_STRUCT
+static
+const
+struct _RESIZE_STRUCT
 {
     HWND* hWindow;
     RESIZE_COORD Left;
     RESIZE_COORD Top;
     RESIZE_COORD Right;
     RESIZE_COORD Bottom;
-} RESIZE_STRUCT;
-
-static
-const
-RESIZE_STRUCT g_Resize[] =
+} g_Resize[] =
 {
     { &g_hTreeView, FIXED_AT(0), FIXED_AT(0), FIXED_AT(200), PERCENTAGE(100) },
     { &g_hEdit, FIXED_AT(200), FIXED_AT(0), PERCENTAGE(100), FIXED_AT(100) },
@@ -141,8 +70,7 @@ RESIZE_STRUCT g_Resize[] =
     { &g_hGripper, FOLLOW_SM(SM_CXVSCROLL,0), FOLLOW_SM(SM_CYVSCROLL,0), PERCENTAGE(100), PERCENTAGE(100) },
 };
 
-static
-LONG DoCoord(HWND hObject, LONG MaxValue, const RESIZE_COORD* coord)
+LONG BADAPP_EXPORT DoCoord(HWND hObject, LONG MaxValue, const RESIZE_COORD* coord)
 {
     if (coord->Type == POS_FIXED)
         return coord->Value;
@@ -165,8 +93,7 @@ LONG DoCoord(HWND hObject, LONG MaxValue, const RESIZE_COORD* coord)
     return 0;
 }
 
-static
-void OnSize(HWND hWnd, WPARAM wParam)
+void BADAPP_EXPORT OnSize(HWND hWnd, WPARAM wParam)
 {
     HDWP hdwp;
     RECT rcClient;
@@ -205,8 +132,7 @@ void OnSize(HWND hWnd, WPARAM wParam)
     ShowWindow(g_hGripper, (wParam == SIZE_MAXIMIZED) ? SW_HIDE : SW_SHOW);
 }
 
-static
-HTREEITEM InsertTV(HWND hwndTV, BAD_ACTION* Item, HTREEITEM Parent, HTREEITEM InsertAfter)
+HTREEITEM BADAPP_EXPORT InsertTV(HWND hwndTV, BAD_ACTION* Item, HTREEITEM Parent, HTREEITEM InsertAfter)
 {
     TVINSERTSTRUCTW tvins = {0};
     HTREEITEM hItem;
@@ -222,18 +148,17 @@ HTREEITEM InsertTV(HWND hwndTV, BAD_ACTION* Item, HTREEITEM Parent, HTREEITEM In
     return hItem;
 }
 
-static
-void CreateTV(HWND hWnd, HINSTANCE hInstance)
+void BADAPP_EXPORT CreateTV(HWND hWnd, HINSTANCE hInstance)
 {
     DWORD n, j;
     DWORD dwTvStyle = TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_INFOTIP;
     HTREEITEM hPrevCat = TVI_FIRST;
     LPWSTR Icons[MaxIcons] = {
-        MAKEINTRESOURCE(IDI_APPLICATION),   // NoIcon, but the treeview state handles index '0' as not assigned..
-        MAKEINTRESOURCE(IDI_APPLICATION),   // ApplicationIcon
-        MAKEINTRESOURCE(IDI_HAND),          // BadIcon
-        MAKEINTRESOURCE(IDI_ASTERISK),      // InformationIcon
-        MAKEINTRESOURCE(IDI_SHIELD),        // ShieldIcon
+        IDI_APPLICATION,    // NoIcon, but the treeview state handles index '0' as not assigned..
+        IDI_APPLICATION,    // ApplicationIcon
+        IDI_HAND,           // BadIcon
+        IDI_ASTERISK,       // InformationIcon
+        IDI_SHIELD,         // ShieldIcon
     };
     HICON hIcon;
 
@@ -264,8 +189,7 @@ void CreateTV(HWND hWnd, HINSTANCE hInstance)
     }
 }
 
-static
-void OnCreate(HWND hWnd)
+void BADAPP_EXPORT OnCreate(HWND hWnd)
 {
     HINSTANCE hInstance = GetModuleHandleW(NULL);
 
@@ -285,14 +209,13 @@ void OnCreate(HWND hWnd)
                                0, 0, 0, 200, hWnd, NULL, hInstance, NULL);
     SendMessageW(g_hCombo, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Direct call");
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Window message");
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"New thread");
-    SendMessageW(g_hCombo, CB_SETCURSEL, 0, 0);
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Direct call");    // DirectCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Window message"); // WindowMessageCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"New thread");     // NewThreadCC
+    SendMessageW(g_hCombo, CB_SETCURSEL, (WPARAM)g_CallContext, 0);
 }
 
-static
-void OnTreeviewNotify(LPNMTREEVIEWW lTreeview)
+void BADAPP_EXPORT OnTreeviewNotify(LPNMTREEVIEWW lTreeview)
 {
     LPNMTVGETINFOTIPW pTip;
     BAD_ACTION* Action;
@@ -304,7 +227,8 @@ void OnTreeviewNotify(LPNMTREEVIEWW lTreeview)
         if (!(lTreeview->itemNew.mask & TVIF_PARAM))
         {
             Output(L"Got tvitem without PARAM!");
-            DebugBreak();
+            assert(0);
+            return;
         }
         Action = (BAD_ACTION*)lTreeview->itemNew.lParam;
         if (Action->Description && Action->Description[0])
@@ -331,8 +255,7 @@ void OnTreeviewNotify(LPNMTREEVIEWW lTreeview)
     }
 }
 
-static
-LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+LRESULT BADAPP_EXPORT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
     switch (Msg)
     {
@@ -347,10 +270,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
         ((MINMAXINFO *)lParam)->ptMinTrackSize.y = 300;
         break;
     case WM_COMMAND:
-        switch (LOWORD(wParam))
+        if (lParam == (LPARAM)g_hCombo && HIWORD(wParam) == CBN_SELCHANGE)
         {
-            //case IDM_ABOUT:
-            //    DialogBoxW(hInst, MAKEINTRESOURCEW(IDD_ABOUTBOX), hWnd, About);
+            g_CallContext = (BAD_CALLCONTEXT)SendMessageW(g_hCombo, CB_GETCURSEL, 0L, 0L);
+            if (g_CallContext == InvalidCC)
+                g_CallContext = DirectCC;
         }
         break;
     case WM_DESTROY:
@@ -366,8 +290,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProcW(hWnd, Msg, wParam, lParam);
 }
 
-static
-BOOL RegisterWndClass(HINSTANCE hInstance, LPCWSTR ClassName)
+BOOL BADAPP_EXPORT RegisterWndClass(HINSTANCE hInstance, LPCWSTR ClassName)
 {
     WCHAR Buffer[50];
     WNDCLASSEX wc = {0};
@@ -390,8 +313,7 @@ BOOL RegisterWndClass(HINSTANCE hInstance, LPCWSTR ClassName)
     return TRUE;
 }
 
-static
-HWND CreateBadWindow(HINSTANCE hInstance, LPCWSTR ClassName)
+HWND BADAPP_EXPORT CreateBadWindow(HINSTANCE hInstance, LPCWSTR ClassName)
 {
     HWND hWnd;
     WCHAR Buffer[50];
@@ -413,6 +335,30 @@ HWND CreateBadWindow(HINSTANCE hInstance, LPCWSTR ClassName)
     return hWnd;
 }
 
+
+void BADAPP_EXPORT Register_Category(BAD_ACTION* Name, BAD_ACTION* Actions)
+{
+    DWORD n;
+
+    assert(Name->Execute == NULL);
+    for (n = 0; Actions[n].Name; ++n)
+    {
+        assert(Actions[n].Execute != NULL);
+    }
+
+    for (n = 0; n < MAX_NUMBER_OF_CATEGORY; ++n)
+    {
+        if (!g_Category[n].Actions)
+        {
+            g_Category[n].Info = *Name;
+            g_Category[n].Actions = Actions;
+            return;
+        }
+    }
+
+    Output(L"Increase MAX_NUMBER_OF_CATEGORY");
+    assert(0);
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -459,6 +405,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         TranslateMessage(&Msg);
         DispatchMessageW(&Msg);
     }
-    ExitProcess(Msg.wParam);
+    ExitProcess((UINT)Msg.wParam);
 }
 
