@@ -19,33 +19,33 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\BadApp.c" />
-    <ClCompile Include="Source\Crash.c" />
-    <ClCompile Include="Source\Diag.c" />
-    <ClCompile Include="Source\Heap.c" />
-    <ClCompile Include="Source\stdafx.c">
+    <ClCompile Include="BadApp.c" />
+    <ClCompile Include="Crash.c" />
+    <ClCompile Include="Diag.c" />
+    <ClCompile Include="Heap.c" />
+    <ClCompile Include="stdafx.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Support.c" />
+    <ClCompile Include="Support.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\BadApp.h" />
-    <ClInclude Include="Source\Resource.h" />
-    <ClInclude Include="Source\stdafx.h" />
-    <ClInclude Include="Source\targetver.h" />
-    <ClInclude Include="Source\version.h" />
+    <ClInclude Include="BadApp.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Source\BadApp.ico" />
+    <Image Include="BadApp.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Source\BadApp.rc" />
+    <ResourceCompile Include="BadApp.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\BadApp.rc2" />
+    <None Include="BadApp.rc2" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C42D2E62-1DBE-46AF-8D38-4CE43CB7E40A}</ProjectGuid>
@@ -134,7 +134,7 @@
       </EntryPointSymbol>
     </Link>
     <PreBuildEvent>
-      <Command>GenVersion.bat</Command>
+      <Command>$(SolutionDir)GenVersion.bat</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Generating version header</Message>
@@ -159,7 +159,7 @@
       </EntryPointSymbol>
     </Link>
     <PreBuildEvent>
-      <Command>GenVersion.bat</Command>
+      <Command>$(SolutionDir)GenVersion.bat</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Generating version header</Message>
@@ -192,7 +192,7 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>GenVersion.bat</Command>
+      <Command>$(SolutionDir)GenVersion.bat</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Generating version header</Message>
@@ -226,7 +226,7 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>GenVersion.bat</Command>
+      <Command>$(SolutionDir)GenVersion.bat</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Generating version header</Message>

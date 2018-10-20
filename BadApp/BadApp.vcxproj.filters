@@ -15,54 +15,54 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\BadApp.c">
+    <ClCompile Include="BadApp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Crash.c">
+    <ClCompile Include="Crash.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Diag.c">
+    <ClCompile Include="Diag.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Heap.c">
+    <ClCompile Include="Heap.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\stdafx.c">
+    <ClCompile Include="stdafx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Support.c">
+    <ClCompile Include="Support.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\BadApp.h">
+    <ClInclude Include="BadApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Resource.h">
+    <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\stdafx.h">
+    <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\targetver.h">
+    <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\version.h">
+    <ClInclude Include="version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Source\BadApp.ico">
+    <Image Include="BadApp.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Source\BadApp.rc">
+    <ResourceCompile Include="BadApp.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\BadApp.rc2">
+    <None Include="BadApp.rc2">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

@@ -2,10 +2,12 @@
 
 setlocal
 
+set HEADER_NAME="%~dp0generated_git_version.h"
+
 for /f %%i in ('git describe --always --dirty') do set GIT_VERSION=%%i
 set FULL_STRING=#define GIT_VERSION_DESC  "%GIT_VERSION%"
-if exist generated_git_version.h (
-    set /p CURRENT_STRING=<generated_git_version.h
+if exist %HEADER_NAME% (
+    set /p CURRENT_STRING=<%HEADER_NAME%
 ) else (
     set CURRENT_STRING=_does_not_exist_
 )
@@ -24,12 +26,12 @@ for /F "tokens=1,2,3,4,5 delims=.-" %%a in ("%GIT_VERSION%") do (
     )
 )
 
-(echo %FULL_STRING%)> generated_git_version.h
-(echo #define GIT_VERSION_MAJOR %GIT_MAJOR%)>> generated_git_version.h
-(echo #define GIT_VERSION_MINOR %GIT_MINOR%)>> generated_git_version.h
-(echo #define GIT_VERSION_REV   %GIT_REV%)>> generated_git_version.h
-(echo #define GIT_VERSION_DIRTY %GIT_DIRTY%)>> generated_git_version.h
-(echo #define GIT_VERSION_HASH  "%GIT_HASH%")>> generated_git_version.h
+(echo %FULL_STRING%)> %HEADER_NAME%
+(echo #define GIT_VERSION_MAJOR %GIT_MAJOR%)>> %HEADER_NAME%
+(echo #define GIT_VERSION_MINOR %GIT_MINOR%)>> %HEADER_NAME%
+(echo #define GIT_VERSION_REV   %GIT_REV%)>> %HEADER_NAME%
+(echo #define GIT_VERSION_DIRTY %GIT_DIRTY%)>> %HEADER_NAME%
+(echo #define GIT_VERSION_HASH  "%GIT_HASH%")>> %HEADER_NAME%
 
 echo Version: %GIT_MAJOR%.%GIT_MINOR%.%GIT_REV%.%GIT_DIRTY%-%GIT_HASH%
 
