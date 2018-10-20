@@ -52,10 +52,8 @@ void BADAPP_EXPORT AnalyzeShims(LPCWSTR Executable)
     }
     FreeLibrary(hModule);
 }
-#if 0
 
-static
-BOOL ShowChar(WCHAR ch)
+BOOL BADAPP_EXPORT ShowChar(WCHAR ch)
 {
     if (ch >= 0x20 && ch <= 0x7e)
     {
@@ -64,10 +62,9 @@ BOOL ShowChar(WCHAR ch)
     return FALSE;
 }
 
-#define CHARS_PER_LINE 16
+#define CHARS_PER_LINE 8
 
-static
-void AnalyzeRegistry(LPCWSTR Executable)
+void BADAPP_EXPORT AnalyzeRegistry(LPCWSTR Executable)
 {
     HKEY StateKey;
     LSTATUS Status;
@@ -114,7 +111,6 @@ void AnalyzeRegistry(LPCWSTR Executable)
         CloseHandle(StateKey);
     }
 }
-#endif
 
 BOOL BADAPP_EXPORT RelaunchAsAdmin()
 {
@@ -363,6 +359,6 @@ void BADAPP_EXPORT Diag_Init(void)
     if (bAdmin)
         g_Diag[1].iIcon = ApplicationIcon;
     Register_Category(&g_DiagCategory, g_Diag + (bAdmin ? 1 : 0));
-    //AnalyzeRegistry(AppExecutable());
+    AnalyzeRegistry(AppExecutable());
 }
 

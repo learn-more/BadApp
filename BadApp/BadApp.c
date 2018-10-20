@@ -33,7 +33,8 @@ static BAD_CALLCONTEXT g_CallContext = DirectCC;
 static ULONG g_ExecMessage;
 static HWND g_hTreeView;
 static HIMAGELIST g_hTreeViewImagelist;
-static HWND g_hEdit;
+static HWND g_hDescriptionEdit;
+static HWND g_hOutputEdit;
 static HWND g_hGripper;
 static HWND g_hCombo;
 
@@ -55,6 +56,8 @@ typedef struct _RESIZE_COORD
     HWND* hOther;
 } RESIZE_COORD;
 
+#define TV_WIDTH    200
+
 static
 const
 struct _RESIZE_STRUCT
@@ -66,13 +69,14 @@ struct _RESIZE_STRUCT
     RESIZE_COORD Bottom;
 } g_Resize[] =
 {
-    { &g_hTreeView, FIXED_AT(0), FIXED_AT(0), FIXED_AT(200), PERCENTAGE(100) },
-    { &g_hEdit, FIXED_AT(200), FIXED_AT(0), PERCENTAGE(100), FIXED_AT(100) },
-    { &g_hCombo, FIXED_AT(200), FOLLOW_OBJH(0, &g_hCombo), FOLLOW_SM(SM_CXVSCROLL,400), PERCENTAGE(100) },
+    { &g_hTreeView, FIXED_AT(0), FIXED_AT(0), FIXED_AT(TV_WIDTH), PERCENTAGE(100) },
+    { &g_hDescriptionEdit, FIXED_AT(TV_WIDTH), FIXED_AT(0), PERCENTAGE(100), FIXED_AT(100) },
+    { &g_hCombo, FIXED_AT(TV_WIDTH), FOLLOW_OBJH(0, &g_hCombo), FOLLOW_SM(SM_CXVSCROLL,TV_WIDTH + 200), PERCENTAGE(100) },
+    { &g_hOutputEdit, FIXED_AT(TV_WIDTH), FIXED_AT(100), PERCENTAGE(100), FOLLOW_OBJH(0, &g_hCombo) },
     { &g_hGripper, FOLLOW_SM(SM_CXVSCROLL,0), FOLLOW_SM(SM_CYVSCROLL,0), PERCENTAGE(100), PERCENTAGE(100) },
 };
 
-LONG BADAPP_EXPORT DoCoord(HWND hObject, LONG MaxValue, const RESIZE_COORD* coord)
+LONG BADAPP_EXPORT DoCoord(LONG MaxValue, const RESIZE_COORD* coord)
 {
     if (coord->Type == POS_FIXED)
         return coord->Value;
@@ -88,7 +92,7 @@ LONG BADAPP_EXPORT DoCoord(HWND hObject, LONG MaxValue, const RESIZE_COORD* coor
     if (coord->Type == POS_FOLLOW_OBJH)
     {
         RECT rc;
-        GetWindowRect(hObject, &rc);
+        GetWindowRect(*coord->hOther, &rc);
         return MaxValue - (rc.bottom - rc.top) - coord->Value;
     }
     assert(0);
@@ -99,7 +103,7 @@ void BADAPP_EXPORT OnSize(HWND hWnd, WPARAM wParam)
 {
     HDWP hdwp;
     RECT rcClient;
-    DWORD n, dwBaseFlags = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+    DWORD n, dwFlags = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOCOPYBITS;
 
     GetClientRect(hWnd, &rcClient);
     assert(rcClient.left == 0);
@@ -109,25 +113,16 @@ void BADAPP_EXPORT OnSize(HWND hWnd, WPARAM wParam)
 
     for (n = 0; n < _countof(g_Resize); ++n)
     {
-        RECT rc, oldRC;
-        DWORD dwFlags;
-        HWND hObject = *g_Resize[n].hWindow;
+        RECT rc;
+        HWND hChild = *g_Resize[n].hWindow;
 
-        rc.left = DoCoord(hObject, rcClient.right, &g_Resize[n].Left);
-        rc.top = DoCoord(hObject, rcClient.bottom, &g_Resize[n].Top);
-        rc.right = DoCoord(hObject, rcClient.right, &g_Resize[n].Right);
-        rc.bottom = DoCoord(hObject, rcClient.bottom, &g_Resize[n].Bottom);
-        GetWindowRect(hObject, &oldRC);
-
-        dwFlags = dwBaseFlags;
-        if ((rc.right - rc.left) != (oldRC.right - oldRC.left) ||
-            (rc.bottom - rc.top) != (oldRC.bottom - oldRC.top))
-        {
-            dwFlags |= SWP_NOCOPYBITS;
-        }
+        rc.left = DoCoord(rcClient.right, &g_Resize[n].Left);
+        rc.top = DoCoord(rcClient.bottom, &g_Resize[n].Top);
+        rc.right = DoCoord(rcClient.right, &g_Resize[n].Right);
+        rc.bottom = DoCoord(rcClient.bottom, &g_Resize[n].Bottom);
 
         if (hdwp)
-            hdwp = DeferWindowPos(hdwp, hObject, NULL, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, dwFlags);
+            hdwp = DeferWindowPos(hdwp, hChild, NULL, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, dwFlags);
     }
 
     EndDeferWindowPos(hdwp);
@@ -146,14 +141,13 @@ HTREEITEM BADAPP_EXPORT InsertTV(HWND hwndTV, BAD_ACTION* Item, HTREEITEM Parent
     tvins.item.state = INDEXTOSTATEIMAGEMASK(Item->iIcon);
     tvins.item.stateMask = TVIS_STATEIMAGEMASK;
 
-    hItem = (HTREEITEM)SendMessageW(hwndTV, TVM_INSERTITEMW, 0, (LPARAM)&tvins);
+    hItem = (HTREEITEM)SendMessageW(hwndTV, TVM_INSERTITEMW, 0L, (LPARAM)&tvins);
     return hItem;
 }
 
-void BADAPP_EXPORT CreateTV(HWND hWnd, HINSTANCE hInstance)
+void BADAPP_EXPORT FillTV()
 {
     DWORD n, j;
-    DWORD dwTvStyle = TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_INFOTIP;
     HTREEITEM hPrevCat = TVI_FIRST;
     LPWSTR Icons[MaxIcons] = {
         IDI_APPLICATION,    // NoIcon, but the treeview state handles index '0' as not assigned..
@@ -163,10 +157,6 @@ void BADAPP_EXPORT CreateTV(HWND hWnd, HINSTANCE hInstance)
         IDI_SHIELD,         // ShieldIcon
     };
     HICON hIcon;
-
-    g_hTreeView = CreateWindowExW(0, WC_TREEVIEW, L"Hello :)", WS_VISIBLE | WS_CHILD | WS_BORDER | dwTvStyle,
-                                  0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
-    SendMessageW(g_hTreeView, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 
     g_hTreeViewImagelist = ImageList_Create(16, 16, ILC_COLOR32, 1, 1);
     for (n = 0; n < _countof(Icons); ++n)
@@ -193,53 +183,77 @@ void BADAPP_EXPORT CreateTV(HWND hWnd, HINSTANCE hInstance)
 
 void BADAPP_EXPORT OnCreate(HWND hWnd)
 {
+    DWORD dwTvStyle = TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_INFOTIP;
     HINSTANCE hInstance = GetModuleHandleW(NULL);
+    LOGFONTW lf = {0};
+    HFONT hFont;
 
-    CreateTV(hWnd, hInstance);
+    /* Treeview for all actions */
+    g_hTreeView = CreateWindowExW(0, WC_TREEVIEW, L"Hello :)", WS_VISIBLE | WS_CHILD | WS_BORDER | dwTvStyle,
+                                  0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
+    SendMessageW(g_hTreeView, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)FALSE);
 
-    g_hEdit = CreateWindowExW(WS_EX_NOPARENTNOTIFY | WS_EX_CLIENTEDGE, WC_EDITW, NULL,
-                              WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-                              0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
-    SendMessageW(g_hEdit, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
+    /* Show description of the selected node */
+    g_hDescriptionEdit = CreateWindowExW(WS_EX_NOPARENTNOTIFY | WS_EX_CLIENTEDGE, WC_EDITW, NULL,
+                                         WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY,
+                                         0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
+    SendMessageW(g_hDescriptionEdit, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)FALSE);
 
+    /* Show output */
+    g_hOutputEdit = CreateWindowExW(WS_EX_NOPARENTNOTIFY | WS_EX_CLIENTEDGE, WC_EDITW, NULL,
+                                    WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY,
+                                    0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
+    lf.lfHeight = -11;
+    lf.lfWeight = FW_NORMAL;
+    StringCchCopyW(lf.lfFaceName, _countof(lf.lfFaceName), L"Courier New");
+    hFont = CreateFontIndirectW(&lf);
+    SendMessageW(g_hOutputEdit, WM_SETFONT, (WPARAM)hFont, (LPARAM)FALSE);
+
+    /* Resize gripper */
     g_hGripper = CreateWindowExW(0, L"Scrollbar", L"size", WS_CHILD | WS_VISIBLE | SBS_SIZEGRIP,
                                  0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
-    SendMessageW(g_hGripper, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
+    SendMessageW(g_hGripper, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)FALSE);
     SetWindowPos(g_hGripper, HWND_TOP, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_SHOWWINDOW);
 
     g_hCombo = CreateWindowExW(0, WC_COMBOBOXW, L"", CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE,
                                0, 0, 0, 200, hWnd, NULL, hInstance, NULL);
-    SendMessageW(g_hCombo, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
+    SendMessageW(g_hCombo, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)FALSE);
 
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Direct call");        // DirectCC
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"PostMessage");        // WindowMessageCC
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"CreateThread");       // NewThreadCC
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"RtlCreateUserThread");// RtlCreateUserThreadCC
-    SendMessageW(g_hCombo, CB_SETCURSEL, (WPARAM)g_CallContext, 0);
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0L, (LPARAM)L"Direct call");        // DirectCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0L, (LPARAM)L"PostMessage");        // WindowMessageCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0L, (LPARAM)L"CreateThread");       // NewThreadCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0L, (LPARAM)L"RtlCreateUserThread");// RtlCreateUserThreadCC
+    SendMessageW(g_hCombo, CB_SETCURSEL, (WPARAM)g_CallContext, 0L);
+
+    /* Register all handlers */
+    Crash_Init();
+    Heap_Init();
+    Diag_Init();
+
+    /* Dump handlers in treeview */
+    FillTV();
 }
 
 /* This is only here to show up in the callstack */
 void BADAPP_EXPORT OnDirectCall(BAD_ACTION* Action)
 {
     Action->Execute();
+    Output(L"'%s' done.", Action->Name);
 }
 
 DWORD BADAPP_EXPORT WINAPI ThreadProcK32(LPVOID pArg)
 {
     BAD_ACTION* Action = (BAD_ACTION*)pArg;
     Action->Execute();
+    Output(L"'%s' done.", Action->Name);
     return 0;
 }
 
 DWORD BADAPP_EXPORT WINAPI ThreadProcNt(LPVOID pArg)
 {
     BAD_ACTION* Action = (BAD_ACTION*)pArg;
-    if (!Action->Execute)
-    {
-        Output(L"ThreadProcNt: Do not merge me with K32 proc :)");
-        return 0x123;
-    }
     Action->Execute();
+    Output(L"'%s' done.", Action->Name);
     return 0;
 }
 
@@ -257,12 +271,15 @@ void BADAPP_EXPORT OnExecute(HWND hWnd, BAD_ACTION* Action)
     switch (g_CallContext)
     {
     case DirectCC:
+        Output(L"Calling '%s'", Action->Name);
         OnDirectCall(Action);
         break;
     case PostMessageCC:
+        Output(L"Posting '%s'", Action->Name);
         PostMessageW(hWnd, g_ExecMessage, 0L, (LPARAM)Action);
         break;
     case CreateThreadCC:
+        Output(L"CreateThread '%s'", Action->Name);
         hThread = CreateThread(NULL, 0, ThreadProcK32, Action, 0, NULL);
         if (hThread)
             CloseHandle(hThread);
@@ -274,6 +291,7 @@ void BADAPP_EXPORT OnExecute(HWND hWnd, BAD_ACTION* Action)
         {
             RtlCreateUserThread = (tRtlCreateUserThread)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlCreateUserThread");
         }
+        Output(L"RtlCreateUserThread '%s'", Action->Name);
         RtlCreateUserThread(((HANDLE)(LONG_PTR)-1), NULL, 0, 0, 0, 0, ThreadProcNt, Action, NULL, NULL);
         break;
     default:
@@ -299,9 +317,9 @@ void BADAPP_EXPORT OnTreeviewNotify(HWND hWnd, LPNMTREEVIEWW lTreeview)
         }
         Action = (BAD_ACTION*)lTreeview->itemNew.lParam;
         if (Action->Description && Action->Description[0])
-            SetWindowTextW(g_hEdit, Action->Description);
+            SetWindowTextW(g_hDescriptionEdit, Action->Description);
         else
-            SetWindowTextW(g_hEdit, L"");
+            SetWindowTextW(g_hDescriptionEdit, L"");
         break;
     case TVN_GETINFOTIP:
         pTip = (LPNMTVGETINFOTIPW)lTreeview;
@@ -316,7 +334,10 @@ void BADAPP_EXPORT OnTreeviewNotify(HWND hWnd, LPNMTREEVIEWW lTreeview)
         if (tvi.hItem && SendMessageW(g_hTreeView, TVM_GETITEMW, 0L, (LPARAM)&tvi))
         {
             Action = (BAD_ACTION*)tvi.lParam;
-            OnExecute(hWnd, Action);
+            if (Action->Execute)
+            {
+                OnExecute(hWnd, Action);
+            }
         }
         break;
     }
@@ -328,6 +349,7 @@ LRESULT BADAPP_EXPORT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARA
     {
         BAD_ACTION* Action = (BAD_ACTION*)lParam;
         Action->Execute();
+        Output(L"'%s' done.", Action->Name);
         return 0L;
     }
 
@@ -409,6 +431,12 @@ HWND BADAPP_EXPORT CreateBadWindow(HINSTANCE hInstance, LPCWSTR ClassName)
     return hWnd;
 }
 
+void BADAPP_EXPORT Gui_AddOutput(LPCWSTR Text)
+{
+    SendMessageW(g_hOutputEdit, EM_SETSEL, INT_MAX, INT_MAX);
+    SendMessageW(g_hOutputEdit, EM_REPLACESEL, FALSE, (LPARAM)Text);
+    SendMessageW(g_hOutputEdit, EM_SCROLLCARET, 0L, 0L);
+}
 
 void BADAPP_EXPORT Register_Category(BAD_ACTION* Name, BAD_ACTION* Actions)
 {
@@ -451,10 +479,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     hInstance = GetModuleHandleW(NULL);
     g_ExecMessage = RegisterWindowMessageW(L"BadAppExecLaterMSG");
     InitCommonControls();
-
-    Crash_Init();
-    Heap_Init();
-    Diag_Init();
 
     if (!RegisterWndClass(hInstance, lpClassName))
     {

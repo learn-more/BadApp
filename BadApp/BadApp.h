@@ -17,7 +17,7 @@
 #endif
 
 
-
+void BADAPP_EXPORT Gui_AddOutput(LPCWSTR Text);
 void BADAPP_EXPORT Output(wchar_t const* const _Format, ...);
 void BADAPP_EXPORT xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...);
 

@@ -30,11 +30,10 @@ void BADAPP_EXPORT Output(wchar_t const* const _Format, ...)
     wchar_t buf[1024];
     vsnwprintf_(buf, _countof(buf), _Format, _ArgList);
     va_end(_ArgList);
+    StringCchCatW(buf, _countof(buf), L"\r\n");
     OutputDebugStringW(buf);
-    OutputDebugStringW(L"\r\n");
 
-    //int Index = (int)SendMessageW(g_Listbox, LB_ADDSTRING, 0L, (LPARAM)buf);
-    //SendMessageW(g_Listbox, LB_SETCURSEL, Index, 0L);
+    Gui_AddOutput(buf);
 }
 
 void BADAPP_EXPORT xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const _Format, ...)
