@@ -24,6 +24,7 @@ typedef enum _BAD_CALLCONTEXT
     DirectCC = 0,
     PostMessageCC,
     CreateThreadCC,
+    RtlCreateUserThreadCC,
 } BAD_CALLCONTEXT;
 
 #define MAX_NUMBER_OF_CATEGORY  5
@@ -210,9 +211,10 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
                                0, 0, 0, 200, hWnd, NULL, hInstance, NULL);
     SendMessageW(g_hCombo, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Direct call");    // DirectCC
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"PostMessage");    // WindowMessageCC
-    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"CreateThread");   // NewThreadCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"Direct call");        // DirectCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"PostMessage");        // WindowMessageCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"CreateThread");       // NewThreadCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0, (LPARAM)L"RtlCreateUserThread");// RtlCreateUserThreadCC
     SendMessageW(g_hCombo, CB_SETCURSEL, (WPARAM)g_CallContext, 0);
 }
 
@@ -222,12 +224,31 @@ void BADAPP_EXPORT OnDirectCall(BAD_ACTION* Action)
     Action->Execute();
 }
 
-DWORD BADAPP_EXPORT WINAPI ThreadProc(LPVOID pArg)
+DWORD BADAPP_EXPORT WINAPI ThreadProcK32(LPVOID pArg)
 {
     BAD_ACTION* Action = (BAD_ACTION*)pArg;
     Action->Execute();
     return 0;
 }
+
+DWORD BADAPP_EXPORT WINAPI ThreadProcNt(LPVOID pArg)
+{
+    BAD_ACTION* Action = (BAD_ACTION*)pArg;
+    if (!Action->Execute)
+    {
+        Output(L"ThreadProcNt: Do not merge me with K32 proc :)");
+        return 0x123;
+    }
+    Action->Execute();
+    return 0;
+}
+
+typedef ULONG (NTAPI *tRtlCreateUserThread)(HANDLE ProcessHandle, PSECURITY_DESCRIPTOR SecurityDescriptor,
+                                            BOOLEAN CreateSuspended, ULONG StackZeroBits, SIZE_T StackReserve,
+                                            SIZE_T StackCommit, PTHREAD_START_ROUTINE StartAddress,
+                                            PVOID Parameter, PHANDLE ThreadHandle, PVOID ClientId);
+static tRtlCreateUserThread RtlCreateUserThread;
+
 
 void BADAPP_EXPORT OnExecute(HWND hWnd, BAD_ACTION* Action)
 {
@@ -242,11 +263,18 @@ void BADAPP_EXPORT OnExecute(HWND hWnd, BAD_ACTION* Action)
         PostMessageW(hWnd, g_ExecMessage, 0L, (LPARAM)Action);
         break;
     case CreateThreadCC:
-        hThread = CreateThread(NULL, 0, ThreadProc, Action, 0, NULL);
+        hThread = CreateThread(NULL, 0, ThreadProcK32, Action, 0, NULL);
         if (hThread)
             CloseHandle(hThread);
         else
             Output(L"Failed to create thread");
+        break;
+    case RtlCreateUserThreadCC:
+        if (!RtlCreateUserThread)
+        {
+            RtlCreateUserThread = (tRtlCreateUserThread)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlCreateUserThread");
+        }
+        RtlCreateUserThread(((HANDLE)(LONG_PTR)-1), NULL, 0, 0, 0, 0, ThreadProcNt, Action, NULL, NULL);
         break;
     default:
         assert(0);
