@@ -10,17 +10,26 @@
 static HANDLE g_Heap1;
 static HANDLE g_Heap2;
 
+#define ALLOCATION_SIZE     0x0d
+
 PVOID BADAPP_EXPORT DoAllocation(void)
 {
-    PVOID Allocation = HeapAlloc(g_Heap1, 0, 0x10);
-    //Output(L"Alloc(Heap1, 0x10)=%p", Allocation);
+    PVOID Allocation = HeapAlloc(g_Heap1, 0, ALLOCATION_SIZE);
+    Output(L"Alloc(Heap1, 0x%x)=%p", ALLOCATION_SIZE, Allocation);
     return Allocation;
 }
 
-void BADAPP_EXPORT NormalFreeFN(void)
+void BADAPP_EXPORT NormalFree1FN(void)
 {
     PVOID Allocation = DoAllocation();
     HeapFree(g_Heap1, 0, Allocation);
+}
+
+void BADAPP_EXPORT NormalFree2FN(void)
+{
+    PVOID Allocation = HeapAlloc(g_Heap2, 0, ALLOCATION_SIZE);
+    Output(L"Alloc(Heap2, 0x%x)=%p", ALLOCATION_SIZE, Allocation);
+    HeapFree(g_Heap2, 0, Allocation);
 }
 
 void BADAPP_EXPORT UseAfterFreeFN(void)
@@ -48,18 +57,24 @@ void BADAPP_EXPORT OverflowFN(void)
 {
     PVOID Allocation = DoAllocation();
     PBYTE ptr = (PBYTE)Allocation;
-    ptr[0x10] = 0x11;
-    ptr[0x11] = 0x22;
+    ptr[ALLOCATION_SIZE] = 0x11;
     HeapFree(g_Heap1, 0, Allocation);
 }
 
 static BAD_ACTION g_Heap[] =
 {
     {
-        L"Normal alloc",
-        L"Allocate and free memory",
-        L"Allocate and free memory using HeapAlloc and HeapFree. This can be used to trigger checks in the heap functions.",
-        NormalFreeFN,
+        L"Normal alloc Heap1",
+        L"Allocate and free memory from Heap1",
+        L"Allocate and free memory using HeapAlloc and HeapFree. This can be used to trigger checks in the heap functions. This function operates on Heap1.",
+        NormalFree1FN,
+        NoIcon
+    },
+    {
+        L"Normal alloc Heap2",
+        L"Allocate and free memory from Heap2",
+        L"Allocate and free memory using HeapAlloc and HeapFree. This can be used to trigger checks in the heap functions. This function operates on Heap1.",
+        NormalFree2FN,
         NoIcon
     },
     {
@@ -108,6 +123,8 @@ void BADAPP_EXPORT Heap_Init(void)
     g_Heap2 = HeapCreate(0, 0, 0);
 
     Register_Category(&g_HeapCategory, g_Heap);
+    Output(L"Heap1: %p", g_Heap1);
+    Output(L"Heap2: %p", g_Heap2);
 }
 
 
