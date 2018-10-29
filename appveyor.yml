@@ -1,5 +1,4 @@
 version: '#{build}-{branch}'
-skip_tags: true
 configuration: Release
 platform:
 - x86
@@ -8,10 +7,13 @@ build:
   project: BadApp.sln
   parallel: true
   verbosity: minimal
+after_build:
+  cmd:
+    7z a BadApp-%PLATFORM%.zip %APPVEYOR_BUILD_FOLDER%\bin\BadApp-%PLATFORM%.exe %APPVEYOR_BUILD_FOLDER%\bin\BadApp-%PLATFORM%.pdb
 test: off
 artifacts:
-- path: bin\BadApp-$(Platform).exe
-- path: bin\BadApp-$(Platform).pdb
+- path: BadApp-$(platform).zip
+  name: BadApp-$(platform)
 skip_commits:
   files:
     - docs/*

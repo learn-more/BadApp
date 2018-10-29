@@ -8,6 +8,7 @@
 #define GIT_VERSION_STR \
     xstr(GIT_VERSION_MAJOR) "." \
     xstr(GIT_VERSION_MINOR) "." \
-    xstr(GIT_VERSION_REV) "." \
-    xstr(GIT_VERSION_DIRTY)
+    xstr(GIT_VERSION_PATCH) "." \
+    xstr(GIT_VERSION_REV) \
+         GIT_VERSION_DIRTY
 
