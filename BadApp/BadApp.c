@@ -245,7 +245,7 @@ DWORD BADAPP_EXPORT WINAPI ThreadProcK32(LPVOID pArg)
 {
     BAD_ACTION* Action = (BAD_ACTION*)pArg;
     Action->Execute();
-    Output(L"'%s' done.", Action->Name);
+    Output(L"'%s' from ThreadProcK32 done.", Action->Name);
     return 0;
 }
 
@@ -253,7 +253,7 @@ DWORD BADAPP_EXPORT WINAPI ThreadProcNt(LPVOID pArg)
 {
     BAD_ACTION* Action = (BAD_ACTION*)pArg;
     Action->Execute();
-    Output(L"'%s' done.", Action->Name);
+    Output(L"'%s' from ThreadProcNt done.", Action->Name);
     return 0;
 }
 
