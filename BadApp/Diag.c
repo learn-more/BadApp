@@ -290,6 +290,39 @@ void BADAPP_EXPORT AnalyzeWER(LPCWSTR FullPath)
     }
 }
 
+void BADAPP_EXPORT AnalyzeZoneID(LPCWSTR Executable)
+{
+    IInternetSecurityManager* pism;
+    HRESULT hr;
+
+    CoInitialize(NULL);
+
+    hr = CoCreateInstance(&CLSID_InternetSecurityManager, NULL, CLSCTX_ALL, &IID_IInternetSecurityManager, &pism);
+    if (SUCCEEDED(hr))
+    {
+        DWORD dwZone;
+        hr = pism->lpVtbl->MapUrlToZone(pism, Executable, &dwZone, MUTZ_ISFILE | MUTZ_DONT_UNESCAPE);
+        if (SUCCEEDED(hr) && dwZone != URLZONE_LOCAL_MACHINE)
+        {
+            PCWSTR wszZoneIds[6] =
+            {
+                L"URLZONE_LOCAL_MACHINE",
+                L"URLZONE_INTRANET",
+                L"URLZONE_TRUSTED",
+                L"URLZONE_INTERNET",
+                L"URLZONE_UNTRUSTED",
+                L"<INVALID>"
+            };
+            Output(L"ZoneID: %u [%s]\n", dwZone, wszZoneIds[min(dwZone, 5)]);
+        }
+
+        pism->lpVtbl->Release(pism);
+    }
+
+    CoUninitialize();
+}
+
+
 void BADAPP_EXPORT RelaunchFN(void)
 {
     if (RelaunchAsAdmin())
@@ -354,11 +387,12 @@ void BADAPP_EXPORT Diag_Init(void)
     BOOL bAdmin;
     AnalyzeShims(AppExecutable());
     AnalyzeWER(AppExecutable());
+    AnalyzeRegistry(AppExecutable());
+    AnalyzeZoneID(AppExecutable());
 
     bAdmin = IsRunAsAdmin();
     if (bAdmin)
         g_Diag[1].iIcon = ApplicationIcon;
     Register_Category(&g_DiagCategory, g_Diag + (bAdmin ? 1 : 0));
-    AnalyzeRegistry(AppExecutable());
 }
 
