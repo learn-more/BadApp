@@ -13,19 +13,29 @@ Combining all kinds of common application bugs in a simple application ensures t
 
 ## Features
 
-* Heuristics:
-    * Detect some known applied mitigations (SHIMS)
-    * Detect the current 'ticket' state for the FTH
-* Heap bugs:
-    * Modify memory after it has been freed (Use after free)
-    * Free memory twice (Double free)
-    * Free allocation from another heap as it was allocated from
-    * Write more data than was allocated (Buffer overflow)
+
 * Crashes:
     * Crash by calling a nullptr
     * Crash by reading from a nullptr
     * Crash by writing to a nullptr
     * Crash by causing a stack overflow
+* Heap bugs:
+    * Modify memory after it has been freed (Use after free)
+    * Free memory twice (Double free)
+    * Free allocation from another heap as it was allocated from
+    * Write more data than was allocated (Buffer overflow)
+* Diagnostics:
+    * Relaunch BadApp as Admin
+    * Reset global FTH ticket state
+    * Enable WER for BadApp (Current user, and when possible, all users)
+    * Disable WER for BadApp (Current user, and when possible, all users)
 * Control the context the bugs will use:
-    * Called from DialogProc
-    * Called from a new thread
+    * Called directly from WndProc (Respond to button click)
+    * Called from a message posted to the WndProc
+    * Called from a new Win32 thread (CreateThread)
+    * Called from a new Native thread (RtlCreateUserThread)
+* Heuristics:
+    * Detect some known applied mitigations (SHIMS)
+    * Detect the current 'ticket' state for the FTH
+    * Detect the application WER status (disabled for current user, for all users)
+    * Detect ZoneID
