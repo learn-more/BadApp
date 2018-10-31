@@ -6,6 +6,8 @@
  */
 
 #include "stdafx.h"
+#include "version.h"
+#include <wininet.h>
 #include <shellapi.h>
 #include <Objbase.h>
 
@@ -341,6 +343,41 @@ void BADAPP_EXPORT DisableWerFN(void)
     DisableWER(FALSE);
 }
 
+void BADAPP_EXPORT CheckVersionFN(void)
+{
+    HINTERNET hInternet = InternetOpenA("BadApp/" GIT_VERSION_STR, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    if (hInternet)
+    {
+        HINTERNET hUrl = InternetOpenUrlW(hInternet, L"https://github.com/learn-more/BadApp/releases/latest", NULL, 0,
+                                          INTERNET_FLAG_NO_COOKIES | INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_AUTO_REDIRECT, 0);
+        if (hUrl)
+        {
+            WCHAR Buf[512] = {0};
+            DWORD dwBufSize = sizeof(Buf);
+            DWORD dwIndex = 0;
+            if (HttpQueryInfoW(hUrl, HTTP_QUERY_LOCATION, Buf, &dwBufSize, &dwIndex))
+            {
+                Output(L"Latest release: %s", Buf);
+            }
+            else
+            {
+                Output(L"Error %u calling HttpQueryInfoA", GetLastError());
+            }
+            InternetCloseHandle(hUrl);
+        }
+        else
+        {
+            Output(L"Error %u calling InternetOpenUrlA", GetLastError());
+        }
+
+        InternetCloseHandle(hInternet);
+    }
+    else
+    {
+        Output(L"Error %u calling InternetOpenA", GetLastError());
+    }
+}
+
 static BAD_ACTION g_Diag[] =
 {
     {
@@ -369,6 +406,13 @@ static BAD_ACTION g_Diag[] =
         L"Disable WER for BadApp",
         L"Disable Windows Error Reporting for BadApp. First try to set this for all users, then for the current user.",
         DisableWerFN,
+        ApplicationIcon
+    },
+    {
+        L"Check version",
+        L"Check github for the latest version",
+        L"Check the github release page to see what the latest version is.",
+        CheckVersionFN,
         ApplicationIcon
     },
     { NULL }

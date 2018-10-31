@@ -9,6 +9,7 @@
 
 void BADAPP_EXPORT CallNullptrFN(void)
 {
+    // Hide from the compiler that we are calling a nullptr
     Action Proc = (Action)GetProcAddress(0, "__this_function_does_not_exist_but_my_compiler_doesnt_know_that__");
 
     Proc();
@@ -31,6 +32,7 @@ void BADAPP_EXPORT WriteNullptrFN(void)
 
 void BADAPP_EXPORT StackOverflowFN(void)
 {
+    // Suppress warnings / hide from the compiler what we are doing here
     Action recurse = (Action)GetProcAddress(0, "StackOverflowFN");
     if (recurse == NULL)
         recurse = StackOverflowFN;
