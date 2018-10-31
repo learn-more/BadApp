@@ -19,6 +19,11 @@ Combining all kinds of common application bugs in a simple application ensures t
     * Crash by reading from a nullptr
     * Crash by writing to a nullptr
     * Crash by causing a stack overflow
+* Handle bugs:
+    * Call SetEvent on an invalid handle
+    * Call SetEvent on a NULL handle
+    * WaitForMultipleObjects with no handles
+    * Call SetEvent on a Semaphore
 * Heap bugs:
     * Modify memory after it has been freed (Use after free)
     * Free memory twice (Double free)
