@@ -55,6 +55,9 @@
     <Image Include="BadApp.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="BadApp_32.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BadApp.rc">

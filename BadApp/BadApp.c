@@ -8,7 +8,8 @@
 #include "stdafx.h"
 #include "version.h"
 #include <CommCtrl.h>
-#pragma comment(lib, "comctl32.lib")
+#include <shellapi.h>
+#include <Objbase.h>
 
 
 typedef struct _BAD_CATEGORY
@@ -462,6 +463,72 @@ void BADAPP_EXPORT Register_Category(BAD_ACTION* Name, BAD_ACTION* Actions)
     assert(0);
 }
 
+void BADAPP_EXPORT OnInitAboutDlg(HWND hDlg)
+{
+    HWND hWndParent;
+    RECT rc;
+    int w, h;
+
+    hWndParent = GetParent(hDlg);
+    GetWindowRect(hDlg, &rc);
+    w = rc.right - rc.left;
+    h = rc.bottom - rc.top;
+    GetWindowRect(hWndParent, &rc);
+    SetWindowPos(hDlg, HWND_TOP,
+                 rc.left + ((rc.right - rc.left) - w) / 2,
+                 rc.top + ((rc.bottom - rc.top) - h) / 2,
+                 0, 0, SWP_NOSIZE);
+
+    SetDlgItemTextA(hDlg, IDC_VERSION, "<a href=\"https://learn-more.github.io/BadApp/\">BadApp</a> " GIT_VERSION_STR);
+}
+
+INT_PTR BADAPP_EXPORT CALLBACK AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+
+    switch (uMsg)
+    {
+    case WM_INITDIALOG:
+        OnInitAboutDlg(hDlg);
+        return TRUE;
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDCANCEL:
+        case IDOK:
+            EndDialog(hDlg, 0);
+            break;
+        }
+        break;
+    case WM_NOTIFY:
+        switch (((LPNMHDR)lParam)->code)
+        {
+        case NM_CLICK:
+        case NM_RETURN:
+        {
+            PNMLINK pNMLink = (PNMLINK)lParam;
+            if (pNMLink->hdr.idFrom == IDC_VERSION || pNMLink->hdr.idFrom == IDC_CREDITS)
+            {
+                SHELLEXECUTEINFOW shExInfo = { sizeof(shExInfo) };
+                shExInfo.lpVerb = L"open";
+                shExInfo.hwnd = hDlg;
+                shExInfo.fMask = SEE_MASK_UNICODE | SEE_MASK_NOZONECHECKS | SEE_MASK_NOASYNC;
+                shExInfo.lpFile = pNMLink->item.szUrl;
+                shExInfo.nShow = SW_SHOW;
+
+                CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+                ShellExecuteExW(&shExInfo);
+                CoUninitialize();
+            }
+        }
+            break;
+        }
+    default:
+        break;
+    }
+    return FALSE;
+}
+
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPWSTR    lpCmdLine,
@@ -503,6 +570,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
         TranslateMessage(&Msg);
         DispatchMessageW(&Msg);
+
+        /* Just spy for messages here. This way we also see it when a child control has focus */
+        if (Msg.message == WM_KEYUP && Msg.wParam == VK_F1)
+        {
+            DialogBoxW(hInstance, MAKEINTRESOURCEW(IDD_ABOUTBOX), hWnd, AboutProc);
+        }
     }
     ExitProcess((UINT)Msg.wParam);
 }
