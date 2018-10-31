@@ -47,13 +47,11 @@ static BAD_ACTION g_Actions[] =
     {
         L"Call nullptr",
         L"Crash by calling a nullptr",
-        L"Crash by calling a nullptr",
         CallNullptrFN,
         BadIcon
     },
     {
         L"Read nullptr",
-        L"Crash by reading from a nullptr",
         L"Crash by reading from a nullptr",
         ReadNullptrFN,
         BadIcon
@@ -61,13 +59,11 @@ static BAD_ACTION g_Actions[] =
     {
         L"Write nullptr",
         L"Crash by writing to a nullptr",
-        L"Crash by writing to a nullptr",
         WriteNullptrFN,
         BadIcon
     },
     {
         L"Stack overflow",
-        L"Crash by causing a stack overflow",
         L"Crash by causing a stack overflow",
         StackOverflowFN,
         BadIcon
@@ -78,7 +74,6 @@ static BAD_ACTION g_Actions[] =
 static BAD_ACTION g_Category =
 {
     L"Crashes",
-    L"Invoke crashes",
     L"Apply various techniques to crash BadApp.",
     NULL
 };

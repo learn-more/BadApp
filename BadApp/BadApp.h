@@ -36,7 +36,6 @@ typedef enum _ACTION_ICON
 typedef struct _BAD_ACTION
 {
     LPCWSTR Name;
-    LPCWSTR Tooltip;
     LPCWSTR Description;
     Action Execute;
     ACTION_ICON iIcon;

@@ -326,8 +326,8 @@ void BADAPP_EXPORT OnTreeviewNotify(HWND hWnd, LPNMTREEVIEWW lTreeview)
     case TVN_GETINFOTIP:
         pTip = (LPNMTVGETINFOTIPW)lTreeview;
         Action = (BAD_ACTION*)pTip->lParam;
-        if (Action->Tooltip && Action->Tooltip[0])
-            StringCchCopyW(pTip->pszText, pTip->cchTextMax, Action->Tooltip);
+        if (Action->Description && Action->Description[0])
+            StringCchCopyW(pTip->pszText, pTip->cchTextMax, Action->Description);
         break;
     case NM_DBLCLK:
         ZeroMemory(&tvi, sizeof(tvi));

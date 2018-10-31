@@ -38,28 +38,24 @@ static BAD_ACTION g_Actions[] =
 {
     {
         L"SetEvent on invalid",
-        L"Call SetEvent with an invalid handle",
         L"Call SetEvent with a handle value of -2.",
         SetInvalidFN,
         BadIcon
     },
     {
         L"SetEvent NULL handle",
-        L"Call SetEvent an NULL handle",
         L"Call SetEvent with a NULL handle.",
         SetNullFN,
         BadIcon
     },
     {
         L"WaitForMultipleObjects",
-        L"Call WaitForMultipleObjects with NULL",
         L"Pass WaitForMultipleObjects a NULL pointer as handle array",
         WaitForMultipleObjectsFN,
         BadIcon
     },
     {
         L"WrongEvent",
-        L"Call SetEvent with a semaphore handle",
         L"Create a semaphore (CreateSemaphoreW), and use this to call SetEvent",
         WrongEventFN,
         BadIcon
@@ -70,7 +66,6 @@ static BAD_ACTION g_Actions[] =
 static BAD_ACTION g_Category =
 {
     L"Handles",
-    L"Various handle bugs",
     L"Trigger various bugs related to invalid handles",
     NULL,
     NoIcon

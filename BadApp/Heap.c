@@ -65,42 +65,36 @@ static BAD_ACTION g_Actions[] =
 {
     {
         L"Normal alloc Heap1",
-        L"Allocate and free memory from Heap1",
         L"Allocate and free memory using HeapAlloc and HeapFree. This can be used to trigger checks in the heap functions. This function operates on Heap1.",
         NormalFree1FN,
         NoIcon
     },
     {
         L"Normal alloc Heap2",
-        L"Allocate and free memory from Heap2",
         L"Allocate and free memory using HeapAlloc and HeapFree. This can be used to trigger checks in the heap functions. This function operates on Heap1.",
         NormalFree2FN,
         NoIcon
     },
     {
         L"Use after free",
-        L"Modify memory after it has been freed",
         L"Free memory using HeapFree, and modify it afterwards.",
         UseAfterFreeFN,
         BadIcon
     },
     {
         L"Double free",
-        L"Free memory twice",
         L"Free memory twice using HeapFree.",
         DoubleFreeFN,
         BadIcon
     },
     {
         L"Free wrong heap",
-        L"Free allocation from another heap as it was allocated from",
         L"Allocate memory using HeapAlloc from Heap1, then free it using HeapFree from Heap2.",
         WrongHeapFN,
         BadIcon
     },
     {
         L"Buffer overflow",
-        L"Write more data than was allocated",
         L"Write 2 bytes past the allocated space, then free the memory using HeapFree.",
         OverflowFN,
         BadIcon
@@ -111,7 +105,6 @@ static BAD_ACTION g_Actions[] =
 static BAD_ACTION g_Category =
 {
     L"Heap",
-    L"Various heap bugs",
     L"Trigger various heap bugs",
     NULL,
     NoIcon
