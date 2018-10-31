@@ -190,7 +190,7 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
     HFONT hFont;
 
     /* Treeview for all actions */
-    g_hTreeView = CreateWindowExW(0, WC_TREEVIEW, L"Hello :)", WS_VISIBLE | WS_CHILD | WS_BORDER | dwTvStyle,
+    g_hTreeView = CreateWindowExW(0, WC_TREEVIEW, L"Hello :)", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP | dwTvStyle,
                                   0, 0, 0, 0, hWnd, NULL, hInstance, NULL);
     SendMessageW(g_hTreeView, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)FALSE);
 
@@ -216,7 +216,7 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
     SendMessageW(g_hGripper, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)FALSE);
     SetWindowPos(g_hGripper, HWND_TOP, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_SHOWWINDOW);
 
-    g_hCombo = CreateWindowExW(0, WC_COMBOBOXW, L"", CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE,
+    g_hCombo = CreateWindowExW(0, WC_COMBOBOXW, L"", CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE | WS_TABSTOP,
                                0, 0, 0, 200, hWnd, NULL, hInstance, NULL);
     SendMessageW(g_hCombo, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)FALSE);
 
@@ -302,11 +302,28 @@ void BADAPP_EXPORT OnExecute(HWND hWnd, BAD_ACTION* Action)
     }
 }
 
+void BADAPP_EXPORT OnExecuteTVSelection(HWND hWnd)
+{
+    TVITEMW tvi = {0};
+    BAD_ACTION* Action;
+
+    tvi.mask = TVIF_PARAM;
+    tvi.hItem = (HTREEITEM)SendMessageW(g_hTreeView, TVM_GETNEXTITEM, TVGN_CARET, 0L);
+    if (tvi.hItem && SendMessageW(g_hTreeView, TVM_GETITEMW, 0L, (LPARAM)&tvi))
+    {
+        Action = (BAD_ACTION*)tvi.lParam;
+        if (Action->Execute)
+        {
+            OnExecute(hWnd, Action);
+        }
+    }
+}
+
 void BADAPP_EXPORT OnTreeviewNotify(HWND hWnd, LPNMTREEVIEWW lTreeview)
 {
     LPNMTVGETINFOTIPW pTip;
+    LPNMTVKEYDOWN pKey;
     BAD_ACTION* Action;
-    TVITEMW tvi;
 
     switch (lTreeview->hdr.code)
     {
@@ -329,18 +346,21 @@ void BADAPP_EXPORT OnTreeviewNotify(HWND hWnd, LPNMTREEVIEWW lTreeview)
         if (Action->Description && Action->Description[0])
             StringCchCopyW(pTip->pszText, pTip->cchTextMax, Action->Description);
         break;
-    case NM_DBLCLK:
-        ZeroMemory(&tvi, sizeof(tvi));
-        tvi.mask = TVIF_PARAM;
-        tvi.hItem = (HTREEITEM)SendMessageW(g_hTreeView, TVM_GETNEXTITEM, TVGN_CARET, 0L);
-        if (tvi.hItem && SendMessageW(g_hTreeView, TVM_GETITEMW, 0L, (LPARAM)&tvi))
+    case TVN_KEYDOWN:
+        pKey = (LPNMTVKEYDOWN)lTreeview;
+        if (pKey->wVKey == VK_RETURN || pKey->wVKey == VK_EXECUTE)
         {
-            Action = (BAD_ACTION*)tvi.lParam;
-            if (Action->Execute)
-            {
-                OnExecute(hWnd, Action);
-            }
+            OnExecuteTVSelection(hWnd);
         }
+        else if (pKey->wVKey == VK_SPACE)
+        {
+            HTREEITEM hItem = (HTREEITEM)SendMessageW(g_hTreeView, TVM_GETNEXTITEM, TVGN_CARET, 0L);
+            if (hItem)
+                SendMessageW(g_hTreeView, TVM_EXPAND, TVE_TOGGLE, (LPARAM)hItem);
+        }
+        break;
+    case NM_DBLCLK:
+        OnExecuteTVSelection(hWnd);
         break;
     }
 }
@@ -569,8 +589,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DestroyWindow(hWnd);
             ExitProcess(GetLastError());
         }
-        TranslateMessage(&Msg);
-        DispatchMessageW(&Msg);
+        if (!IsDialogMessageW(hWnd, &Msg))
+        {
+            TranslateMessage(&Msg);
+            DispatchMessageW(&Msg);
+        }
 
         /* Just spy for messages here. This way we also see it when a child control has focus */
         if (Msg.message == WM_KEYUP && Msg.wParam == VK_F1)
