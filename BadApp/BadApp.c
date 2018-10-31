@@ -52,8 +52,8 @@ static HWND g_hCombo;
 typedef struct _RESIZE_COORD
 {
     BYTE Type;
-    LONG Value;
-    LONG Max;
+    WORD Value;
+    WORD Max;
     HWND* hOther;
 } RESIZE_COORD;
 
@@ -228,6 +228,7 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
 
     /* Register all handlers */
     Crash_Init();
+    Handles_Init();
     Heap_Init();
     Diag_Init();
 

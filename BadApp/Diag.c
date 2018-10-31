@@ -378,7 +378,7 @@ void BADAPP_EXPORT CheckVersionFN(void)
     }
 }
 
-static BAD_ACTION g_Diag[] =
+static BAD_ACTION g_Actions[] =
 {
     {
         L"Relaunch as admin",
@@ -418,7 +418,7 @@ static BAD_ACTION g_Diag[] =
     { NULL }
 };
 
-static BAD_ACTION g_DiagCategory =
+static BAD_ACTION g_Category =
 {
     L"Diagnostics",
     L"Various diagnostic functions",
@@ -436,7 +436,7 @@ void BADAPP_EXPORT Diag_Init(void)
 
     bAdmin = IsRunAsAdmin();
     if (bAdmin)
-        g_Diag[1].iIcon = ApplicationIcon;
-    Register_Category(&g_DiagCategory, g_Diag + (bAdmin ? 1 : 0));
+        g_Actions[1].iIcon = ApplicationIcon;
+    Register_Category(&g_Category, g_Actions + (bAdmin ? 1 : 0));
 }
 

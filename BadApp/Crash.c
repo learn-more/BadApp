@@ -42,7 +42,7 @@ void BADAPP_EXPORT StackOverflowFN(void)
         Output(L"Done.");   // Prevent tail call optimalization
 }
 
-static BAD_ACTION g_Crash[] =
+static BAD_ACTION g_Actions[] =
 {
     {
         L"Call nullptr",
@@ -75,7 +75,7 @@ static BAD_ACTION g_Crash[] =
     { NULL, NULL },
 };
 
-static BAD_ACTION g_CrashCategory =
+static BAD_ACTION g_Category =
 {
     L"Crashes",
     L"Invoke crashes",
@@ -85,5 +85,5 @@ static BAD_ACTION g_CrashCategory =
 
 void BADAPP_EXPORT Crash_Init(void)
 {
-    Register_Category(&g_CrashCategory, g_Crash);
+    Register_Category(&g_Category, g_Actions);
 }

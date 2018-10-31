@@ -22,6 +22,7 @@
     <ClCompile Include="BadApp.c" />
     <ClCompile Include="Crash.c" />
     <ClCompile Include="Diag.c" />
+    <ClCompile Include="Handles.c" />
     <ClCompile Include="Heap.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

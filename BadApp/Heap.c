@@ -61,7 +61,7 @@ void BADAPP_EXPORT OverflowFN(void)
     HeapFree(g_Heap1, 0, Allocation);
 }
 
-static BAD_ACTION g_Heap[] =
+static BAD_ACTION g_Actions[] =
 {
     {
         L"Normal alloc Heap1",
@@ -108,7 +108,7 @@ static BAD_ACTION g_Heap[] =
     { NULL },
 };
 
-static BAD_ACTION g_HeapCategory =
+static BAD_ACTION g_Category =
 {
     L"Heap",
     L"Various heap bugs",
@@ -122,7 +122,7 @@ void BADAPP_EXPORT Heap_Init(void)
     g_Heap1 = HeapCreate(0, 0, 0);
     g_Heap2 = HeapCreate(0, 0, 0);
 
-    Register_Category(&g_HeapCategory, g_Heap);
+    Register_Category(&g_Category, g_Actions);
     Output(L"Heap1: %p", g_Heap1);
     Output(L"Heap2: %p", g_Heap2);
 }
