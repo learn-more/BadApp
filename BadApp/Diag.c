@@ -408,7 +408,7 @@ static BAD_ACTION g_Actions[] =
         L"Check version",
         L"Check the github release page to see what the latest version is.",
         CheckVersionFN,
-        ApplicationIcon
+        GithubIcon
     },
     { NULL }
 };

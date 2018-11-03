@@ -157,20 +157,30 @@ void BADAPP_EXPORT FillTV()
     DWORD n, j;
     HTREEITEM hPrevCat = TVI_FIRST;
     LPWSTR Icons[MaxIcons] = {
-        IDI_APPLICATION,    // NoIcon, but the treeview state handles index '0' as not assigned..
-        IDI_APPLICATION,    // ApplicationIcon
-        IDI_HAND,           // BadIcon
-        IDI_ASTERISK,       // InformationIcon
-        IDI_SHIELD,         // ShieldIcon
+        MAKEINTRESOURCE(IDI_ABOUT), // NoIcon, but the treeview state handles index '0' as not assigned..
+        IDI_APPLICATION,            // ApplicationIcon
+        IDI_HAND,                   // BadIcon
+        IDI_ASTERISK,               // InformationIcon
+        IDI_SHIELD,                 // ShieldIcon
+        MAKEINTRESOURCE(IDI_GITHUB),// GithubIcon
     };
     HICON hIcon;
+    HMODULE hMod[2] = { NULL, NULL };
+    hMod[0] = GetModuleHandle(NULL);
 
     g_hTreeViewImagelist = ImageList_Create(16, 16, ILC_COLOR32, 1, 1);
     for (n = 0; n < _countof(Icons); ++n)
     {
-        hIcon = LoadImage(NULL, Icons[n], IMAGE_ICON, 16, 16, LR_SHARED | LR_CREATEDIBSECTION);
-        ImageList_AddIcon(g_hTreeViewImagelist, hIcon);
-        DestroyIcon(hIcon);
+        for (j = 0; j < _countof(hMod); ++j)
+        {
+            hIcon = LoadImage(hMod[j], Icons[n], IMAGE_ICON, 16, 16, LR_SHARED | LR_CREATEDIBSECTION);
+            if (hIcon)
+            {
+                ImageList_AddIcon(g_hTreeViewImagelist, hIcon);
+                DestroyIcon(hIcon);
+                break;
+            }
+        }
     }
 
     SendMessageW(g_hTreeView, TVM_SETIMAGELIST, TVSIL_STATE, (LPARAM)g_hTreeViewImagelist);

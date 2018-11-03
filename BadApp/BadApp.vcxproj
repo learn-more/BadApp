@@ -42,6 +42,7 @@
   <ItemGroup>
     <Image Include="BadApp.ico" />
     <Image Include="BadApp_32.ico" />
+    <Image Include="Github.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BadApp.rc" />

@@ -61,6 +61,9 @@
     <Image Include="BadApp_32.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="Github.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BadApp.rc">

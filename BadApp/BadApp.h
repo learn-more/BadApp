@@ -30,6 +30,7 @@ typedef enum _ACTION_ICON
     BadIcon,            // IDI_HAND
     InformationIcon,    // IDI_ASTERISK
     ShieldIcon,         // IDI_SHIELD
+    GithubIcon,         // IDI_GITHUB
     MaxIcons
 } ACTION_ICON;
 
