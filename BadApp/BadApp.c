@@ -26,6 +26,7 @@ typedef enum _BAD_CALLCONTEXT
     PostMessageCC,
     CreateThreadCC,
     RtlCreateUserThreadCC,
+    DialogBoxInitCC,
 } BAD_CALLCONTEXT;
 
 #define MAX_NUMBER_OF_CATEGORY  5
@@ -38,6 +39,8 @@ static HWND g_hDescriptionEdit;
 static HWND g_hOutputEdit;
 static HWND g_hGripper;
 static HWND g_hCombo;
+
+INT_PTR BADAPP_EXPORT CALLBACK AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #define POS_FIXED       1
 #define POS_PERCENT     2
@@ -240,6 +243,7 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
     SendMessageW(g_hCombo, CB_ADDSTRING, 0L, (LPARAM)L"PostMessage");        // WindowMessageCC
     SendMessageW(g_hCombo, CB_ADDSTRING, 0L, (LPARAM)L"CreateThread");       // NewThreadCC
     SendMessageW(g_hCombo, CB_ADDSTRING, 0L, (LPARAM)L"RtlCreateUserThread");// RtlCreateUserThreadCC
+    SendMessageW(g_hCombo, CB_ADDSTRING, 0L, (LPARAM)L"DialogBoxInit");      // DialogBoxInitCC
     SendMessageW(g_hCombo, CB_SETCURSEL, (WPARAM)g_CallContext, 0L);
 
     /* Register all handlers */
@@ -311,6 +315,10 @@ void BADAPP_EXPORT OnExecute(HWND hWnd, BAD_ACTION* Action)
         }
         Output(L"RtlCreateUserThread '%s'", Action->Name);
         RtlCreateUserThread(((HANDLE)(LONG_PTR)-1), NULL, 0, 0, 0, 0, ThreadProcNt, Action, NULL, NULL);
+        break;
+    case DialogBoxInitCC:
+        Output(L"DialogBoxInit '%s'", Action->Name);
+        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_ABOUTBOX), hWnd, AboutProc, (LPARAM)Action);
         break;
     default:
         assert(0);
@@ -525,6 +533,14 @@ INT_PTR BADAPP_EXPORT CALLBACK AboutProc(HWND hDlg, UINT uMsg, WPARAM wParam, LP
     switch (uMsg)
     {
     case WM_INITDIALOG:
+        if (lParam)
+        {
+            BAD_ACTION* Action = (BAD_ACTION*)lParam;
+            Action->Execute();
+            Output(L"'%s' done.", Action->Name);
+            // Hide the dialog again
+            EndDialog(hDlg, 0);
+        }
         OnInitAboutDlg(hDlg);
         return TRUE;
     case WM_COMMAND:
@@ -614,7 +630,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         /* Just spy for messages here. This way we also see it when a child control has focus */
         if (Msg.message == WM_KEYUP && Msg.wParam == VK_F1)
         {
-            DialogBoxW(hInstance, MAKEINTRESOURCEW(IDD_ABOUTBOX), hWnd, AboutProc);
+            DialogBoxParamW(hInstance, MAKEINTRESOURCEW(IDD_ABOUTBOX), hWnd, AboutProc, 0L);
         }
     }
     ExitProcess((UINT)Msg.wParam);
