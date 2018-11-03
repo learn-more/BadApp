@@ -44,17 +44,23 @@ static HWND g_hCombo;
 #define POS_FOLLOW_SM   3
 #define POS_FOLLOW_OBJH 4
 
-#define FIXED_AT(n)         { POS_FIXED, n, 0, NULL }
-#define PERCENTAGE(n)       { POS_PERCENT, n, 0, NULL }
-#define FOLLOW_SM(n,m)        { POS_FOLLOW_SM, n, m, NULL }
-#define FOLLOW_OBJH(n, h)      { POS_FOLLOW_OBJH, n, 0, h }
+#define FIXED_AT(n)             { .u.s.Value = n, .u.s.Max = 0, .Type = POS_FIXED }
+#define PERCENTAGE(n)           { .u.s.Value = n, .u.s.Max = 0, .Type = POS_PERCENT }
+#define FOLLOW_SM(n,m)          { .u.s.Value = n, .u.s.Max = m, .Type = POS_FOLLOW_SM }
+#define FOLLOW_OBJH(h)          { .u.hOther = h, .Type = POS_FOLLOW_OBJH }
 
 typedef struct _RESIZE_COORD
 {
+    union
+    {
+        struct
+        {
+            WORD Value;
+            WORD Max;
+        } s;
+        HWND* hOther;
+    } u;
     BYTE Type;
-    WORD Value;
-    WORD Max;
-    HWND* hOther;
 } RESIZE_COORD;
 
 #define TV_WIDTH    200
@@ -72,29 +78,29 @@ struct _RESIZE_STRUCT
 {
     { &g_hTreeView, FIXED_AT(0), FIXED_AT(0), FIXED_AT(TV_WIDTH), PERCENTAGE(100) },
     { &g_hDescriptionEdit, FIXED_AT(TV_WIDTH), FIXED_AT(0), PERCENTAGE(100), FIXED_AT(100) },
-    { &g_hCombo, FIXED_AT(TV_WIDTH), FOLLOW_OBJH(0, &g_hCombo), FOLLOW_SM(SM_CXVSCROLL,TV_WIDTH + 200), PERCENTAGE(100) },
-    { &g_hOutputEdit, FIXED_AT(TV_WIDTH), FIXED_AT(100), PERCENTAGE(100), FOLLOW_OBJH(0, &g_hCombo) },
+    { &g_hCombo, FIXED_AT(TV_WIDTH), FOLLOW_OBJH(&g_hCombo), FOLLOW_SM(SM_CXVSCROLL,TV_WIDTH + 200), PERCENTAGE(100) },
+    { &g_hOutputEdit, FIXED_AT(TV_WIDTH), FIXED_AT(100), PERCENTAGE(100), FOLLOW_OBJH(&g_hCombo) },
     { &g_hGripper, FOLLOW_SM(SM_CXVSCROLL,0), FOLLOW_SM(SM_CYVSCROLL,0), PERCENTAGE(100), PERCENTAGE(100) },
 };
 
 LONG BADAPP_EXPORT DoCoord(LONG MaxValue, const RESIZE_COORD* coord)
 {
     if (coord->Type == POS_FIXED)
-        return coord->Value;
+        return coord->u.s.Value;
     if (coord->Type == POS_PERCENT)
-        return coord->Value * MaxValue / 100;
+        return coord->u.s.Value * MaxValue / 100;
     if (coord->Type == POS_FOLLOW_SM)
     {
-        LONG Value = MaxValue - GetSystemMetrics(coord->Value);
-        if (coord->Max && Value > coord->Max)
-            return coord->Max;
+        LONG Value = MaxValue - GetSystemMetrics(coord->u.s.Value);
+        if (coord->u.s.Max && Value > coord->u.s.Max)
+            return coord->u.s.Max;
         return Value;
     }
     if (coord->Type == POS_FOLLOW_OBJH)
     {
         RECT rc;
-        GetWindowRect(*coord->hOther, &rc);
-        return MaxValue - (rc.bottom - rc.top) - coord->Value;
+        GetWindowRect(*coord->u.hOther, &rc);
+        return MaxValue - (rc.bottom - rc.top);
     }
     assert(0);
     return 0;
