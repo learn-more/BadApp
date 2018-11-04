@@ -66,7 +66,7 @@ BOOL BADAPP_EXPORT ShowChar(WCHAR ch)
 
 #define CHARS_PER_LINE 8
 
-void BADAPP_EXPORT AnalyzeRegistry(LPCWSTR Executable)
+void BADAPP_EXPORT AnalyzeFTHState(LPCWSTR Executable)
 {
     HKEY StateKey;
     LSTATUS Status;
@@ -258,28 +258,9 @@ BOOL BADAPP_EXPORT IsWerDisabled(LPCWSTR Executable, BOOL bAllUsers)
     return bDisabled;
 }
 
-LPCWSTR BADAPP_EXPORT wcspbrk_(LPCWSTR Source, LPCWSTR Find)
+void BADAPP_EXPORT AnalyzeWER(LPCWSTR ExeOnly)
 {
-    for (;*Source; ++Source)
-    {
-        LPCWSTR FindCur;
-        for (FindCur = Find; *FindCur; ++FindCur)
-        {
-            if (*FindCur == *Source)
-                return Source;
-        }
-    }
-    return NULL;
-}
-
-void BADAPP_EXPORT AnalyzeWER(LPCWSTR FullPath)
-{
-    LPCWSTR ExeOnly = FullPath;
     BOOL bCurrentUser, bAllUsers;
-    while ((FullPath = wcspbrk_(ExeOnly, L"\\/")) != NULL)
-    {
-        ExeOnly = FullPath + 1;
-    }
 
     bAllUsers = IsWerDisabled(ExeOnly, TRUE);
     bCurrentUser = IsWerDisabled(ExeOnly, FALSE);
@@ -322,6 +303,49 @@ void BADAPP_EXPORT AnalyzeZoneID(LPCWSTR Executable)
     }
 
     CoUninitialize();
+}
+
+#define IMAGEEXECOPTIONSSTRING L"Software\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options"
+
+void BADAPP_EXPORT AnalyzeGlobalFlags(LPCWSTR ExeOnly)
+{
+    LONG Ret;
+    HKEY HandleKey, HandleSubKey;
+    WCHAR Buffer[20] = { 0 };
+    DWORD Type, Len = sizeof(Buffer) - sizeof(WCHAR);
+
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, IMAGEEXECOPTIONSSTRING, 0, KEY_READ, &HandleKey) != ERROR_SUCCESS)
+    {
+        Output(L"Unable to open HKLM\\%s", IMAGEEXECOPTIONSSTRING);
+        return;
+    }
+
+    Ret = RegCreateKeyExW(HandleKey, ExeOnly, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ, NULL, &HandleSubKey, NULL);
+    CloseHandle(HandleKey);
+
+    if (Ret != ERROR_SUCCESS)
+        return;
+
+    if (RegQueryValueExW(HandleSubKey, L"GlobalFlag", NULL, &Type, (BYTE*)Buffer, &Len) == ERROR_SUCCESS)
+    {
+        DWORD Flags = 0;
+        if (Type == REG_SZ)
+        {
+            Flags = wcstoul_(Buffer, NULL, 16);
+            Output(L"GlobalFlag(sz): %08x", Flags);
+        }
+        else if (Type == REG_DWORD && Len == sizeof(DWORD))
+        {
+            Flags = *(DWORD*)Buffer;
+            Output(L"GlobalFlag(dw): %08x", Flags);
+        }
+        else
+        {
+            Output(L"Unknown type: %u", Type);
+        }
+    }
+
+    CloseHandle(HandleSubKey);
 }
 
 
@@ -423,10 +447,20 @@ static BAD_ACTION g_Category =
 void BADAPP_EXPORT Diag_Init(void)
 {
     BOOL bAdmin;
-    AnalyzeShims(AppExecutable());
-    AnalyzeWER(AppExecutable());
-    AnalyzeRegistry(AppExecutable());
-    AnalyzeZoneID(AppExecutable());
+    LPCWSTR ExeOnly, FullPath, Tmp;
+
+    ExeOnly = FullPath = Tmp = AppExecutable();
+
+    while ((Tmp = wcspbrk_(ExeOnly, L"\\/")) != NULL)
+    {
+        ExeOnly = Tmp + 1;
+    }
+
+    AnalyzeShims(FullPath);
+    AnalyzeWER(ExeOnly);
+    AnalyzeFTHState(FullPath);
+    AnalyzeZoneID(FullPath);
+    AnalyzeGlobalFlags(ExeOnly);
 
     bAdmin = IsRunAsAdmin();
     if (bAdmin)

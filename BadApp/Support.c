@@ -55,3 +55,27 @@ void* memset(void *s, int c, size_t len)
     }
     return s;
 }
+
+unsigned long (__cdecl *p_wcstoul)(const wchar_t* str, wchar_t** endptr, int base);
+unsigned long BADAPP_EXPORT wcstoul_(const wchar_t* str, wchar_t** endptr, int base)
+{
+    if (!p_wcstoul)
+        p_wcstoul = (unsigned long (__cdecl *)(const wchar_t *,wchar_t **,int))GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "wcstoul");
+
+    return p_wcstoul(str, endptr, base);
+}
+
+LPCWSTR BADAPP_EXPORT wcspbrk_(LPCWSTR Source, LPCWSTR Find)
+{
+    for (;*Source; ++Source)
+    {
+        LPCWSTR FindCur;
+        for (FindCur = Find; *FindCur; ++FindCur)
+        {
+            if (*FindCur == *Source)
+                return Source;
+        }
+    }
+    return NULL;
+}
+
