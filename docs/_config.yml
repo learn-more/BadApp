@@ -1,6 +1,6 @@
 title: BadApp
 description: Test-application exposing bad behavior
-theme: jekyll-theme-hacker
+theme: jekyll-theme-slate
 
 # To serve jekyll locally:
 repository:         learn-more/BadApp

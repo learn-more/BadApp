@@ -49,6 +49,7 @@ BOOL BADAPP_EXPORT IsRunAsAdmin(void);
 void BADAPP_EXPORT Register_Category(BAD_ACTION* Name, BAD_ACTION* Actions);
 
 void BADAPP_EXPORT Crash_Init(void);
+void BADAPP_EXPORT CriticalSection_Init(void);
 void BADAPP_EXPORT Handles_Init(void);
 void BADAPP_EXPORT Heap_Init(void);
 void BADAPP_EXPORT Diag_Init(void);

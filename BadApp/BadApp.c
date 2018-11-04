@@ -155,7 +155,7 @@ HTREEITEM BADAPP_EXPORT InsertTV(HWND hwndTV, BAD_ACTION* Item, HTREEITEM Parent
     return hItem;
 }
 
-void BADAPP_EXPORT FillTV()
+void BADAPP_EXPORT FillTV(void)
 {
     DWORD n, j;
     HTREEITEM hPrevCat = TVI_FIRST;
@@ -248,6 +248,7 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
 
     /* Register all handlers */
     Crash_Init();
+    CriticalSection_Init();
     Handles_Init();
     Heap_Init();
     Diag_Init();

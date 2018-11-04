@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="BadApp.c" />
     <ClCompile Include="Crash.c" />
+    <ClCompile Include="CriticalSection.c" />
     <ClCompile Include="Diag.c" />
     <ClCompile Include="Handles.c" />
     <ClCompile Include="Heap.c" />
