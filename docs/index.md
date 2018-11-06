@@ -3,7 +3,7 @@ layout: default
 title: BadApp
 ---
 
-# Preview
+# BadApp
 
 ![Example](BadApp.png)
 
