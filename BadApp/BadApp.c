@@ -167,7 +167,7 @@ void BADAPP_EXPORT FillTV(void)
         IDI_SHIELD,                 // ShieldIcon
         MAKEINTRESOURCE(IDI_GITHUB),// GithubIcon
     };
-    HICON hIcon;
+    HICON hIcon = NULL, hBackup = NULL;
     HMODULE hMod[2] = { NULL, NULL };
     hMod[0] = GetModuleHandle(NULL);
 
@@ -180,9 +180,14 @@ void BADAPP_EXPORT FillTV(void)
             if (hIcon)
             {
                 ImageList_AddIcon(g_hTreeViewImagelist, hIcon);
-                DestroyIcon(hIcon);
+                if (n == 0)
+                    hBackup = hIcon;
                 break;
             }
+        }
+        if (!hIcon && hBackup)
+        {
+            ImageList_AddIcon(g_hTreeViewImagelist, hBackup);
         }
     }
 
