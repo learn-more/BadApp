@@ -164,6 +164,7 @@ void BADAPP_EXPORT FillTV(void)
         IDI_APPLICATION,            // ApplicationIcon
         IDI_HAND,                   // BadIcon
         IDI_ASTERISK,               // InformationIcon
+        IDI_WINLOGO,                // OsIcon
         IDI_SHIELD,                 // ShieldIcon
         MAKEINTRESOURCE(IDI_GITHUB),// GithubIcon
     };

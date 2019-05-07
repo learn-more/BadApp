@@ -31,6 +31,7 @@ typedef enum _ACTION_ICON
     ApplicationIcon,    // IDI_APPLICATION
     BadIcon,            // IDI_HAND
     InformationIcon,    // IDI_ASTERISK
+    OsIcon,             // IDI_WINLOGO
     ShieldIcon,         // IDI_SHIELD
     GithubIcon,         // IDI_GITHUB
     MaxIcons

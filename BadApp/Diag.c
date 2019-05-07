@@ -367,6 +367,50 @@ void BADAPP_EXPORT DisableWerFN(void)
     DisableWER(FALSE);
 }
 
+void BADAPP_EXPORT CheckOsVersionFN(void)
+{
+    DWORD dwVersion;
+    DWORD dwMajorVersion, dwMinorVersion, dwBuildNumber = 0;
+    OSVERSIONINFOEXW VersionInfo;
+    void (__stdcall* pRtlGetVersion)(OSVERSIONINFOEXW*);
+
+    dwVersion = GetVersion();
+    dwMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
+    dwMinorVersion = (DWORD)(HIBYTE(LOWORD(dwVersion)));
+    if (dwVersion < 0x80000000)
+        dwBuildNumber = (DWORD)(HIWORD(dwVersion));
+
+    Output(L"GetVersion() =    %d.%d (%d)", dwMajorVersion, dwMinorVersion, dwBuildNumber);
+
+    ZeroMemory(&VersionInfo, sizeof(VersionInfo));
+    VersionInfo.dwOSVersionInfoSize = sizeof(VersionInfo);
+    if (GetVersionExW((LPOSVERSIONINFOW)&VersionInfo))
+    {
+        Output(L"GetVersionExW() = %d.%d (%d)", VersionInfo.dwMajorVersion, VersionInfo.dwMinorVersion, VersionInfo.dwBuildNumber);
+        if (VersionInfo.wServicePackMajor || VersionInfo.wServicePackMinor || VersionInfo.szCSDVersion[0])
+            Output(L"   Service Pack = %d.%d (%s)", (DWORD)VersionInfo.wServicePackMajor, (DWORD)VersionInfo.wServicePackMinor, VersionInfo.szCSDVersion);
+    }
+    else
+    {
+        Output(L"GetVersionExW() failed (%u)", GetLastError());
+    }
+
+    pRtlGetVersion = (void (__stdcall*)(OSVERSIONINFOEXW*))GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion");
+    if (pRtlGetVersion)
+    {
+        ZeroMemory(&VersionInfo, sizeof(VersionInfo));
+        VersionInfo.dwOSVersionInfoSize = sizeof(VersionInfo);
+        pRtlGetVersion(&VersionInfo);
+        Output(L"RtlGetVersion() = %d.%d (%d)", VersionInfo.dwMajorVersion, VersionInfo.dwMinorVersion, VersionInfo.dwBuildNumber);
+        if (VersionInfo.wServicePackMajor || VersionInfo.wServicePackMinor || VersionInfo.szCSDVersion[0])
+            Output(L"   Service Pack = %d.%d (%s)", (DWORD)VersionInfo.wServicePackMajor, (DWORD)VersionInfo.wServicePackMinor, VersionInfo.szCSDVersion);
+    }
+    else
+    {
+        Output(L"RtlGetVersion() not found (%u)", GetLastError());
+    }
+}
+
 void BADAPP_EXPORT CheckVersionFN(void)
 {
     HINTERNET hInternet = InternetOpenA("BadApp/" GIT_VERSION_STR, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
@@ -427,6 +471,12 @@ static BAD_ACTION g_Actions[] =
         L"Disable Windows Error Reporting for BadApp. First try to set this for all users, then for the current user.",
         DisableWerFN,
         ApplicationIcon
+    },
+    {
+        L"OS version",
+        L"Query the OS version using various techniques.",
+        CheckOsVersionFN,
+        OsIcon
     },
     {
         L"Check version",
