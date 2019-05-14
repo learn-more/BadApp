@@ -2,7 +2,7 @@
  * PROJECT:     BadApp
  * LICENSE:     MIT (https://spdx.org/licenses/MIT)
  * PURPOSE:     Diagnostic / support functions
- * COPYRIGHT:   Copyright 2018 Mark Jansen (mark.jansen@reactos.org)
+ * COPYRIGHT:   Copyright 2018,2019 Mark Jansen (mark.jansen@reactos.org)
  */
 
 #include "stdafx.h"
@@ -10,6 +10,7 @@
 #include <wininet.h>
 #include <shellapi.h>
 #include <Objbase.h>
+#include <TlHelp32.h>
 
 PCWSTR BADAPP_EXPORT AppExecutable()
 {
@@ -411,6 +412,63 @@ void BADAPP_EXPORT CheckOsVersionFN(void)
     }
 }
 
+void BADAPP_EXPORT PrintModule(MODULEENTRY32W* me)
+{
+    DWORD dwInfoSize, dwDum;
+    LPVOID lpInfo;
+
+    Output(L"%s", me->szModule);
+    Output(L"  Address: %p", me->modBaseAddr);
+
+    dwInfoSize = GetFileVersionInfoSizeW(me->szExePath, &dwDum);
+    lpInfo = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwInfoSize);
+    if (lpInfo)
+    {
+        if (GetFileVersionInfoW(me->szExePath, 0, dwInfoSize, lpInfo))
+        {
+            VS_FIXEDFILEINFO* versionInfo;
+            UINT versionInfoSize;
+            if (VerQueryValueW(lpInfo, L"\\", &versionInfo, &versionInfoSize))
+            {
+                Output(L"  Version: %d.%d.%d.%d",
+                       (versionInfo->dwFileVersionMS >> 16) & 0xffff,
+                       (versionInfo->dwFileVersionMS >> 0) & 0xffff,
+                       (versionInfo->dwFileVersionLS >> 16) & 0xffff,
+                       (versionInfo->dwFileVersionLS >> 0) & 0xffff);
+            }
+        }
+    }
+}
+
+void BADAPP_EXPORT ListModulesFN(void)
+{
+    HANDLE hSnap;
+    DWORD dwErr;
+
+    do {
+        hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, 0);
+        dwErr = GetLastError();
+    } while (hSnap == INVALID_HANDLE_VALUE && dwErr == ERROR_BAD_LENGTH);
+
+    if (hSnap != INVALID_HANDLE_VALUE)
+    {
+        MODULEENTRY32W me = { sizeof(me) };
+        if (Module32FirstW(hSnap, &me))
+        {
+            do {
+                PrintModule(&me);
+            } while (Module32NextW(hSnap, &me));
+        }
+        CloseHandle(hSnap);
+    }
+    else
+    {
+        Output(L"CreateToolhelp32Snapshot() failed (%u)", dwErr);
+    }
+}
+
+
+
 void BADAPP_EXPORT CheckVersionFN(void)
 {
     HINTERNET hInternet = InternetOpenA("BadApp/" GIT_VERSION_STR, INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
@@ -476,6 +534,12 @@ static BAD_ACTION g_Actions[] =
         L"OS version",
         L"Query the OS version using various techniques.",
         CheckOsVersionFN,
+        OsIcon
+    },
+    {
+        L"List modules",
+        L"Show all loaded modules.",
+        ListModulesFN,
         OsIcon
     },
     {
