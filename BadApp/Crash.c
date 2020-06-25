@@ -2,10 +2,11 @@
  * PROJECT:     BadApp
  * LICENSE:     MIT (https://spdx.org/licenses/MIT)
  * PURPOSE:     Crashing functions
- * COPYRIGHT:   Copyright 2018 Mark Jansen (mark.jansen@reactos.org)
+ * COPYRIGHT:   Copyright 2018-2020 Mark Jansen (mark.jansen@reactos.org)
  */
 
 #include "stdafx.h"
+#include <signal.h>
 
 void BADAPP_EXPORT CallNullptrFN(void)
 {
@@ -42,6 +43,43 @@ void BADAPP_EXPORT StackOverflowFN(void)
         Output(L"Done.");   // Prevent tail call optimalization
 }
 
+void BADAPP_EXPORT SimulateAssertionFN(void)
+{
+    int (__cdecl* p_raise)(_In_ int _Signal);
+    void (__cdecl* p__exit)(_In_ int _Code);
+
+    HMODULE mod = GetModuleHandleW(L"msvcrt.dll");
+    assert(mod != 0);
+
+    if (mod)
+    {
+        p_raise = (int (__cdecl *)(int))GetProcAddress(mod, "raise");
+        if (p_raise)
+        {
+            p__exit = (void (__cdecl *)(int))GetProcAddress(mod, "_exit");
+            if (p__exit)
+            {
+                p_raise(SIGABRT);
+                p__exit(3);
+                // Unreachable
+                assert(0);
+            }
+            else
+            {
+                Output(L"Unable to resolve msvcrt!_exit");
+            }
+        }
+        else
+        {
+            Output(L"Unable to resolve msvcrt!raise");
+        }
+    }
+    else
+    {
+        Output(L"Unable to get a reference to msvcrt.dll");
+    }
+}
+
 static BAD_ACTION g_Actions[] =
 {
     {
@@ -66,6 +104,12 @@ static BAD_ACTION g_Actions[] =
         L"Stack overflow",
         L"Crash by causing a stack overflow",
         StackOverflowFN,
+        BadIcon
+    },
+    {
+        L"AssertionAbort",
+        L"Simulate the 'abort' button on an assertion dialog",
+        SimulateAssertionFN,
         BadIcon
     },
     { NULL, NULL },
