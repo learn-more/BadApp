@@ -20,6 +20,7 @@ Combining all kinds of common application bugs in a simple application ensures t
     * Crash by reading from a nullptr
     * Crash by writing to a nullptr
     * Crash by causing a stack overflow
+    * Crash by simulating the 'Abort' button from an assertion
 * Critical sections:
     * Terminate a thread holding a critical section
     * Free the memory of a critical section without deleting the section
