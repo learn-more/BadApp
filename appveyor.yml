@@ -21,7 +21,7 @@ skip_commits:
 deploy:
 - provider: GitHub
   auth_token:
-    secure: 0gpitdjlZDBJPr6BhWbZbRNV84AkN02IihwOxRS9+xiD63gvLyJV1NgOuL/kZ+y1
+    secure: Oi0dY+G9aVWKKDX1Zfvnyl6l9RiEuomDiBvkiZMAudT9T42pVw7axiCeuu+tOtK0
   draft: true
   on:
     APPVEYOR_REPO_TAG: true
