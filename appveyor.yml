@@ -1,27 +1,42 @@
 version: '#{build}-{branch}'
+image: Visual Studio 2015
+
 configuration: Release
+
+environment:
+  matrix:
+    - PlatformToolset: v140_xp
+
 platform:
-- x86
-- x64
+  - x86
+  - x64
+
 build:
   project: BadApp.sln
   parallel: true
   verbosity: minimal
+
 after_build:
-  cmd:
-    7z a BadApp-%PLATFORM%.zip %APPVEYOR_BUILD_FOLDER%\bin\BadApp-%PLATFORM%.exe %APPVEYOR_BUILD_FOLDER%\bin\BadApp-%PLATFORM%.pdb
+  cmd: >-
+    7z a BadApp-%PLATFORM%.zip %APPVEYOR_BUILD_FOLDER%\bin\BadApp-%PLATFORM%.exe
+
+    7z a BadApp-%PLATFORM%.zip %APPVEYOR_BUILD_FOLDER%\bin\BadApp-%PLATFORM%.pdb
+
 test: off
+
 artifacts:
-- path: BadApp-$(platform).zip
-  name: BadApp-$(platform)
+  - path: BadApp-$(platform).zip
+    name: BadApp-$(platform)
+
 skip_commits:
   files:
     - docs/*
     - '**/*.html'
+
 deploy:
-- provider: GitHub
-  auth_token:
-    secure: Oi0dY+G9aVWKKDX1Zfvnyl6l9RiEuomDiBvkiZMAudT9T42pVw7axiCeuu+tOtK0
-  draft: true
-  on:
-    APPVEYOR_REPO_TAG: true
+  - provider: GitHub
+    auth_token:
+      secure: Oi0dY+G9aVWKKDX1Zfvnyl6l9RiEuomDiBvkiZMAudT9T42pVw7axiCeuu+tOtK0
+    draft: true
+    on:
+      APPVEYOR_REPO_TAG: true
