@@ -61,6 +61,11 @@ void BADAPP_EXPORT OverflowFN(void)
     HeapFree(g_Heap1, 0, Allocation);
 }
 
+void BADAPP_EXPORT LeakFN(void)
+{
+    DoAllocation();
+}
+
 static BAD_ACTION g_Actions[] =
 {
     {
@@ -97,6 +102,12 @@ static BAD_ACTION g_Actions[] =
         L"Buffer overflow",
         L"Write 2 bytes past the allocated space, then free the memory using HeapFree.",
         OverflowFN,
+        BadIcon
+    },
+    {
+        L"Leak allocation",
+        L"Allocate memory, but never free it.",
+        LeakFN,
         BadIcon
     },
     { NULL },
