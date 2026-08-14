@@ -5,6 +5,11 @@ setlocal
 set HEADER_NAME="%~dp0generated_git_version.h"
 
 for /f %%i in ('git describe --tags --dirty --long') do set GIT_VERSION=%%i
+
+rem Tags carry a "v" prefix from v0.9.0 onwards; 0.8.0 and earlier are bare. The delims below split on "." and
+rem "-" only, so the prefix would end up in GIT_MAJOR and rc.exe would choke on "FILEVERSION v0,9,0,0".
+if "%GIT_VERSION:~0,1%" == "v" set GIT_VERSION=%GIT_VERSION:~1%
+
 set FULL_STRING=#define GIT_VERSION_DESC  "%GIT_VERSION%"
 if exist %HEADER_NAME% (
     set /p CURRENT_STRING=<%HEADER_NAME%

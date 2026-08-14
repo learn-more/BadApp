@@ -1,0 +1,53 @@
+name: MSBuild
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  SOLUTION_FILE_PATH: BadApp.sln
+  BUILD_CONFIGURATION: Release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Pinned, same as release.yml: the v141_xp step below installs into a hard-coded Visual Studio 2022 path, so
+    # windows-latest moving to a newer image breaks it.
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x64]
+    steps:
+    # fetch-depth: 0 because GenVersion.bat runs `git describe --tags` as a pre-build event. Without the tags
+    # the version resource comes out empty and the build fails in rc.exe.
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+
+    # The toolset and the 5.1 SDK the vcxproj targets are not on the image; the WinXP component brings both.
+    # Both arches need it, unlike JobDebug where only x86 is v141_xp - BadApp pins the toolset on all four
+    # configurations.
+    - name: Add v141_xp tools
+      working-directory: "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\"
+      shell: cmd
+      run: vs_installer.exe modify --quiet --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" --add Microsoft.VisualStudio.Component.WinXP --norestart --nocache
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v3
+
+    # Unlike release.yml this is a matrix, because nothing here signs: the one-login-per-build rule that keeps
+    # release.yml in a single job does not apply.
+    - name: Build
+      run: msbuild ${{env.SOLUTION_FILE_PATH}} /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=${{matrix.arch}} /m /v:m /nologo
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: BadApp-${{ matrix.arch }}
+        path: |
+          bin/BadApp-${{ matrix.arch }}.exe
+          bin/BadApp-${{ matrix.arch }}.pdb

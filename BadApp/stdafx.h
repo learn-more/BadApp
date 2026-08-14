@@ -13,7 +13,7 @@
 #include <windows.h>
 
 #include <stdlib.h>
-#include <cassert>
+#include <assert.h>
 #include <strsafe.h>
 
 #include "BadApp.h"
