@@ -76,7 +76,7 @@ static BAD_ACTION g_Actions[] =
     },
     {
         L"Normal alloc Heap2",
-        L"Allocate and free memory using HeapAlloc and HeapFree. This can be used to trigger checks in the heap functions. This function operates on Heap1.",
+        L"Allocate and free memory using HeapAlloc and HeapFree. This can be used to trigger checks in the heap functions. This function operates on Heap2.",
         NormalFree2FN,
         NoIcon
     },

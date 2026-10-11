@@ -53,5 +53,6 @@ void BADAPP_EXPORT Crash_Init(void);
 void BADAPP_EXPORT CriticalSection_Init(void);
 void BADAPP_EXPORT Handles_Init(void);
 void BADAPP_EXPORT Heap_Init(void);
+void BADAPP_EXPORT Threads_Init(void);
 void BADAPP_EXPORT Diag_Init(void);
 

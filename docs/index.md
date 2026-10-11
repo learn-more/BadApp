@@ -40,6 +40,14 @@ Combining all kinds of common application bugs in a simple application ensures t
     * Free memory twice (Double free)
     * Free allocation from another heap as it was allocated from
     * Write more data than was allocated (Buffer overflow)
+    * Allocate memory and never free it (Leak)
+* Threads:
+    * Create threads and never close their handles (handle leak)
+    * Kill a running thread with TerminateThread
+    * Exit a thread while it owns a mutex (WAIT_ABANDONED)
+    * Wait twice on the same semaphore (self deadlock)
+    * Two threads take two critical sections in opposite order (lock order inversion)
+    * Raise an unhandled exception in a worker thread
 * Diagnostics:
     * Relaunch BadApp as Admin
     * Reset global FTH ticket state
@@ -58,3 +66,20 @@ Combining all kinds of common application bugs in a simple application ensures t
     * Detect the application WER status (disabled for current user, for all users)
     * Detect ZoneID
     * Detect GlobalFlag being set in the registry
+
+## Usage
+
+* Select an action in the tree on the left; its name and description show up in the top right pane.
+* Run it by double-clicking, or by pressing Enter in the tree.
+* The dropdown in the bottom right selects the *context* in which the bug runs.
+* The bottom right pane logs the output. Press `Ctrl+L` to clear it, `F1` shows the About dialog.
+
+## Building from source
+
+* Visual Studio 2017 with the Windows XP toolset (`v141_xp`) and the Windows 5.1 SDK, or Visual Studio 2022 with
+  the `Microsoft.VisualStudio.Component.WinXP` component (the GitHub Actions workflows install this component).
+* Open `BadApp.sln` in Visual Studio, or run:
+  `msbuild BadApp.sln /p:Configuration=Release /p:Platform=x86`
+* `GenVersion.bat` is a pre-build event that writes `generated_git_version.h` from `git describe --tags`. When the
+  source tree has no git tags (or no git at all, e.g. a source zip), it falls back to version `0.0.0.0` so the
+  build still succeeds.

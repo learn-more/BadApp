@@ -29,7 +29,7 @@ typedef enum _BAD_CALLCONTEXT
     DialogBoxInitCC,
 } BAD_CALLCONTEXT;
 
-#define MAX_NUMBER_OF_CATEGORY  5
+#define MAX_NUMBER_OF_CATEGORY  8
 static BAD_CATEGORY g_Category[MAX_NUMBER_OF_CATEGORY + 1] = {0};
 static BAD_CALLCONTEXT g_CallContext = DirectCC;
 static ULONG g_ExecMessage;
@@ -37,6 +37,7 @@ static HWND g_hTreeView;
 static HIMAGELIST g_hTreeViewImagelist;
 static HWND g_hDescriptionEdit;
 static HWND g_hOutputEdit;
+static HFONT g_hOutputFont;
 static HWND g_hGripper;
 static HWND g_hCombo;
 
@@ -212,7 +213,6 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
     DWORD dwTvStyle = TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_INFOTIP;
     HINSTANCE hInstance = GetModuleHandleW(NULL);
     LOGFONTW lf = {0};
-    HFONT hFont;
 
     /* Treeview for all actions */
     g_hTreeView = CreateWindowExW(0, WC_TREEVIEW, L"Hello :)", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_TABSTOP | dwTvStyle,
@@ -232,8 +232,8 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
     lf.lfHeight = -11;
     lf.lfWeight = FW_NORMAL;
     StringCchCopyW(lf.lfFaceName, _countof(lf.lfFaceName), L"Courier New");
-    hFont = CreateFontIndirectW(&lf);
-    SendMessageW(g_hOutputEdit, WM_SETFONT, (WPARAM)hFont, (LPARAM)FALSE);
+    g_hOutputFont = CreateFontIndirectW(&lf);
+    SendMessageW(g_hOutputEdit, WM_SETFONT, (WPARAM)g_hOutputFont, (LPARAM)FALSE);
 
     /* Resize gripper */
     g_hGripper = CreateWindowExW(0, L"Scrollbar", L"size", WS_CHILD | WS_VISIBLE | SBS_SIZEGRIP,
@@ -257,6 +257,7 @@ void BADAPP_EXPORT OnCreate(HWND hWnd)
     CriticalSection_Init();
     Handles_Init();
     Heap_Init();
+    Threads_Init();
     Diag_Init();
 
     /* Dump handlers in treeview */
@@ -320,8 +321,14 @@ void BADAPP_EXPORT OnExecute(HWND hWnd, BAD_ACTION* Action)
         {
             RtlCreateUserThread = (tRtlCreateUserThread)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlCreateUserThread");
         }
+        if (!RtlCreateUserThread)
+        {
+            Output(L"Unable to resolve ntdll!RtlCreateUserThread");
+            break;
+        }
         Output(L"RtlCreateUserThread '%s'", Action->Name);
-        RtlCreateUserThread(((HANDLE)(LONG_PTR)-1), NULL, 0, 0, 0, 0, ThreadProcNt, Action, NULL, NULL);
+        if (RtlCreateUserThread(((HANDLE)(LONG_PTR)-1), NULL, 0, 0, 0, 0, ThreadProcNt, Action, NULL, NULL) != 0)
+            Output(L"RtlCreateUserThread failed");
         break;
     case DialogBoxInitCC:
         Output(L"DialogBoxInit '%s'", Action->Name);
@@ -366,10 +373,24 @@ void BADAPP_EXPORT OnTreeviewNotify(HWND hWnd, LPNMTREEVIEWW lTreeview)
             return;
         }
         Action = (BAD_ACTION*)lTreeview->itemNew.lParam;
-        if (Action->Description && Action->Description[0])
-            SetWindowTextW(g_hDescriptionEdit, Action->Description);
-        else
-            SetWindowTextW(g_hDescriptionEdit, L"");
+        {
+            WCHAR Description[1024];
+            WCHAR Title[128];
+
+            if (Action->Description && Action->Description[0])
+                xwprintf(Description, _countof(Description), L"%s\r\n\r\n%s", Action->Name, Action->Description);
+            else
+                xwprintf(Description, _countof(Description), L"%s", Action->Name);
+            SetWindowTextW(g_hDescriptionEdit, Description);
+
+            /* Show the selection in the titlebar too */
+            xwprintf(Title, _countof(Title),
+                     L"BadApp %S%s - %s",
+                     GIT_VERSION_STR,
+                     IsRunAsAdmin() ? L" (Administrator)" : L"",
+                     Action->Name);
+            SetWindowTextW(hWnd, Title);
+        }
         break;
     case TVN_GETINFOTIP:
         pTip = (LPNMTVGETINFOTIPW)lTreeview;
@@ -427,6 +448,18 @@ LRESULT BADAPP_EXPORT CALLBACK WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARA
         }
         break;
     case WM_DESTROY:
+        if (g_hTreeView)
+            SendMessageW(g_hTreeView, TVM_SETIMAGELIST, TVSIL_STATE, 0L);
+        if (g_hTreeViewImagelist)
+        {
+            ImageList_Destroy(g_hTreeViewImagelist);
+            g_hTreeViewImagelist = NULL;
+        }
+        if (g_hOutputFont)
+        {
+            DeleteObject(g_hOutputFont);
+            g_hOutputFont = NULL;
+        }
         PostQuitMessage(0);
         break;
     case WM_NOTIFY:
@@ -628,6 +661,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DestroyWindow(hWnd);
             ExitProcess(GetLastError());
         }
+
+        /* Ctrl+L clears the output, whatever has focus */
+        if (Msg.message == WM_KEYDOWN && Msg.wParam == 'L' && (GetKeyState(VK_CONTROL) & 0x8000))
+        {
+            SetWindowTextW(g_hOutputEdit, L"");
+            continue;
+        }
+
         if (!IsDialogMessageW(hWnd, &Msg))
         {
             TranslateMessage(&Msg);

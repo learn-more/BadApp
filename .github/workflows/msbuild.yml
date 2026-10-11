@@ -13,11 +13,17 @@ env:
 permissions:
   contents: read
 
+concurrency:
+  # Cancel a superseded run on the same branch/PR: only the most recent result matters.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     # Pinned, same as release.yml: the v141_xp step below installs into a hard-coded Visual Studio 2022 path, so
     # windows-latest moving to a newer image breaks it.
     runs-on: windows-2022
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:

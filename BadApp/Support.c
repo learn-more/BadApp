@@ -18,6 +18,12 @@ int BADAPP_EXPORT vsnwprintf_(wchar_t *_Dest, size_t _Count, const wchar_t *_For
     {
         HMODULE mod = GetModuleHandleW(L"ntdll.dll");
         p_vsnwprintf = (int (__cdecl*)(wchar_t *, size_t, const wchar_t *, va_list))GetProcAddress(mod, "_vsnwprintf");
+        if (!p_vsnwprintf)
+        {
+            if (_Count)
+                _Dest[0] = UNICODE_NULL;
+            return 0;
+        }
     }
     return p_vsnwprintf(_Dest, _Count, _Format, _Args);
 }
@@ -28,8 +34,12 @@ void BADAPP_EXPORT Output(wchar_t const* const _Format, ...)
     va_start(_ArgList, _Format);
 
     wchar_t buf[1024];
+    ZeroMemory(buf, sizeof(buf));
     vsnwprintf_(buf, _countof(buf), _Format, _ArgList);
     va_end(_ArgList);
+
+    /* _vsnwprintf can leave the string unterminated when it truncates */
+    buf[_countof(buf) - 1] = UNICODE_NULL;
     StringCchCatW(buf, _countof(buf), L"\r\n");
     OutputDebugStringW(buf);
 
@@ -42,6 +52,8 @@ void BADAPP_EXPORT xwprintf(wchar_t *_Dest, size_t _Count, wchar_t const* const 
     va_start(_ArgList, _Format);
 
     vsnwprintf_(_Dest, _Count, _Format, _ArgList);
+    if (_Count)
+        _Dest[_Count - 1] = UNICODE_NULL;
     va_end(_ArgList);
 }
 
@@ -56,7 +68,7 @@ void* memset(void *s, int c, size_t len)
     return s;
 }
 
-unsigned long (__cdecl *p_wcstoul)(const wchar_t* str, wchar_t** endptr, int base);
+static unsigned long (__cdecl *p_wcstoul)(const wchar_t* str, wchar_t** endptr, int base);
 unsigned long BADAPP_EXPORT wcstoul_(const wchar_t* str, wchar_t** endptr, int base)
 {
     if (!p_wcstoul)

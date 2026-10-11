@@ -4,7 +4,13 @@ setlocal
 
 set HEADER_NAME="%~dp0generated_git_version.h"
 
-for /f %%i in ('git describe --tags --dirty --long') do set GIT_VERSION=%%i
+set GIT_VERSION=
+for /f %%i in ('git describe --tags --dirty --long 2^>nul') do set GIT_VERSION=%%i
+
+rem Without a tag, a git checkout, a working git, or all of the above, the loop above leaves GIT_VERSION empty and
+rem the version resource (FILEVERSION GIT_VERSION_MAJOR,...) ends up containing nothing, which makes rc.exe fail.
+rem Fall back to a version that rc.exe accepts so the project still builds from e.g. a source zip.
+if "%GIT_VERSION%"=="" set GIT_VERSION=0.0.0.0
 
 rem Tags carry a "v" prefix from v0.9.0 onwards; 0.8.0 and earlier are bare. The delims below split on "." and
 rem "-" only, so the prefix would end up in GIT_MAJOR and rc.exe would choke on "FILEVERSION v0,9,0,0".

@@ -111,7 +111,7 @@ void BADAPP_EXPORT AnalyzeFTHState(LPCWSTR Executable)
             }
         }
 
-        CloseHandle(StateKey);
+        RegCloseKey(StateKey);
     }
 }
 
@@ -162,9 +162,8 @@ BOOL BADAPP_EXPORT IsRunAsAdmin()
 void BADAPP_EXPORT ResetFTHState(void)
 {
     SHELLEXECUTEINFOW shExInfo = { sizeof(shExInfo) };
-    shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+    shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_UNICODE | SEE_MASK_NOZONECHECKS | SEE_MASK_NOASYNC;
     shExInfo.lpVerb = L"runas";
-    shExInfo.fMask = SEE_MASK_UNICODE | SEE_MASK_NOZONECHECKS | SEE_MASK_NOASYNC;
     shExInfo.lpFile = L"rundll32";
     shExInfo.lpParameters = L"fthsvc.dll,FthSysprepSpecialize";
     shExInfo.nShow = SW_SHOW;
@@ -284,7 +283,7 @@ void BADAPP_EXPORT AnalyzeZoneID(LPCWSTR Executable)
     hr = CoCreateInstance(&CLSID_InternetSecurityManager, NULL, CLSCTX_ALL, &IID_IInternetSecurityManager, &pism);
     if (SUCCEEDED(hr))
     {
-        DWORD dwZone;
+        DWORD dwZone = URLZONE_LOCAL_MACHINE;
         hr = pism->lpVtbl->MapUrlToZone(pism, Executable, &dwZone, MUTZ_ISFILE | MUTZ_DONT_UNESCAPE);
         if (SUCCEEDED(hr) && dwZone != URLZONE_LOCAL_MACHINE)
         {
@@ -322,7 +321,7 @@ void BADAPP_EXPORT AnalyzeGlobalFlags(LPCWSTR ExeOnly)
     }
 
     Ret = RegCreateKeyExW(HandleKey, ExeOnly, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ, NULL, &HandleSubKey, NULL);
-    CloseHandle(HandleKey);
+    RegCloseKey(HandleKey);
 
     if (Ret != ERROR_SUCCESS)
         return;
@@ -346,7 +345,7 @@ void BADAPP_EXPORT AnalyzeGlobalFlags(LPCWSTR ExeOnly)
         }
     }
 
-    CloseHandle(HandleSubKey);
+    RegCloseKey(HandleSubKey);
 }
 
 
@@ -421,14 +420,17 @@ void BADAPP_EXPORT PrintModule(MODULEENTRY32W* me)
     Output(L"  Address: %p", me->modBaseAddr);
 
     dwInfoSize = GetFileVersionInfoSizeW(me->szExePath, &dwDum);
+    if (!dwInfoSize)
+        return;
+
     lpInfo = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwInfoSize);
     if (lpInfo)
     {
         if (GetFileVersionInfoW(me->szExePath, 0, dwInfoSize, lpInfo))
         {
-            VS_FIXEDFILEINFO* versionInfo;
-            UINT versionInfoSize;
-            if (VerQueryValueW(lpInfo, L"\\", &versionInfo, &versionInfoSize))
+            VS_FIXEDFILEINFO* versionInfo = NULL;
+            UINT versionInfoSize = 0;
+            if (VerQueryValueW(lpInfo, L"\\", (LPVOID*)&versionInfo, &versionInfoSize))
             {
                 Output(L"  Version: %d.%d.%d.%d",
                        (versionInfo->dwFileVersionMS >> 16) & 0xffff,
@@ -437,6 +439,7 @@ void BADAPP_EXPORT PrintModule(MODULEENTRY32W* me)
                        (versionInfo->dwFileVersionLS >> 0) & 0xffff);
             }
         }
+        HeapFree(GetProcessHeap(), 0, lpInfo);
     }
 }
 
